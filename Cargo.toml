@@ -1,0 +1,11 @@
+[package]
+name = "akari"
+version = "0.1.0"
+edition = "2024" 
+description = "Template rendering language" 
+license = "GPL-3.0-or-later" 
+categories = ["network-programming", "web-programming::http-server" ] 
+keywords = ["template-rendering", "frontend"]  
+
+[dependencies]
+authors = ["Redstone <redstone@fds.moe>"] 
