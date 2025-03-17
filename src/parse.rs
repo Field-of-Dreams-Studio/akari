@@ -19,14 +19,15 @@ pub enum Token {
     EndForKeyword,           // e.g., "endfor"
     WhileKeyword,            // e.g., "while"
     EndWhileKeyword,         // e.g., "endwhile"
-    DelKeyword,              // e.g., "del"
+    DelKeyword,              // e.g., "del" 
     
     // Literals and Identifiers
     Identifier(String),      // variable names or user-defined names
     Object(Obj),          // literal number, string, boolean, list and object 
     HtmlContent(String),     // HTML content such as "<script ...>...</script>"
     
-    // Operators and Punctuation
+    // Operators and Punctuation 
+    Dot,                  // . (dot operator for object access) 
 
     // Assignment Operators
     Assignment,              // =
@@ -68,7 +69,7 @@ pub enum Token {
     RightSquareBracket,      // ]
     
     // End of Statement
-    EndOfStatement,          // Marks end of a directive or statement
+    EndOfStatement,          // Marks end of a directive or statement 
 }
 
 /// The Lexer struct holds the input string (our template source code)
@@ -252,6 +253,7 @@ impl Lexer {
                 ')' => Token::RightParen,
                 '[' => Token::LeftSquareBracket,
                 ']' => Token::RightSquareBracket,
+                '.' => Token::Dot, 
                 // For any unrecognized character, we simply return it as an identifier.
                 _ => Token::Identifier(ch.to_string()),
             }

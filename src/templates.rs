@@ -85,7 +85,7 @@ mod tests {
         data.insert("list".to_string(), object!(vec![        object!("a"), 
         object!("b"), 
         object!("c")])); 
-        println!("{:?}", render_string(input, data)); 
+        // println!("{:?}", render_string(input, data)); 
     } 
 } 
  

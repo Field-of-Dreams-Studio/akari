@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use crate::object;
+
 use super::{Object as Obj, TemplateManager};
 use std::fs;
 use std::path::Path;
@@ -211,3 +213,28 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     
     Ok(()) 
 }
+
+#[test] 
+fn test3() -> Result<(), Box<dyn std::error::Error>>{ 
+    use crate::Object; 
+    let page_template = r#"
+<link rel="stylesheet" href="style.css">
+<meta name="description" content="pageprop.desc">
+
+<h1>-[ output pageprop["title"] ]-</h1>
+"#; 
+        
+        // Initialize the template manager
+        let template_manager = TemplateManager::new(Path::new("./temp_templates"));
+        
+        // Set up template data
+        let mut data = HashMap::new();
+        data.insert("pageprop".to_string(), object!({desc: "My Website - Home", title: "Welcome to My Website"})); 
+        data.insert("title".to_string(), object!("111")); 
+        
+        // Render the template
+        let result = template_manager.render_string(page_template.to_string(), &data)?;
+        println!("Rendered Template:\n{}", result);
+        
+        Ok(()) 
+} 

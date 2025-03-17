@@ -9,7 +9,7 @@ mod templates;
 mod test; 
 
 // Export public APIs
-pub use object::Object;
+pub use object::Object; 
 pub use parse::Token;
 pub use compile::compile;
 pub use template_manager::TemplateManager; 

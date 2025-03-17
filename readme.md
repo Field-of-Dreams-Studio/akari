@@ -10,6 +10,10 @@ run to render a template
 
 output: `1` 
 
-This crate is used by Starberry from 0.3.0 
+This crate is used by Starberry since 0.3.0 
 
 [https://crates.io/crates/starberry](https://crates.io/crates/starberry) 
+
+# Examples 
+
+(Examples will be created soon) 

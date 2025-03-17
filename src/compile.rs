@@ -6,8 +6,15 @@ use super::parse;
 use super::object;
 
 pub fn compile(tokens: Vec<Token>, mut data: HashMap<String, Obj>) -> Result<String, String> {
-    let mut compiler = TemplateCompiler::new(tokens, data); 
+    let mut compiler = TemplateCompiler::new(tokens, data);
     compiler.compile()
+}
+
+// AccessType enum to distinguish between reading and writing operations
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AccessType {
+    Read,  // Just reading a value
+    Write, // Writing to a variable or property
 }
 
 struct TemplateCompiler {
@@ -33,11 +40,9 @@ impl TemplateCompiler {
         }
     }
 
-    fn compile(&mut self) -> Result<String, String> { 
-        // println!("tokens: {:?}\n\n\n", self.tokens); 
+    fn compile(&mut self) -> Result<String, String> {
         // First pass: identify blocks and template info
         self.collect_blocks_and_metadata()?; 
-        // println!("tokens: {:?}\n\n\n", self.tokens); 
         
         // Reset position for second pass
         self.pos = 0;
@@ -113,9 +118,8 @@ impl TemplateCompiler {
         Ok(())
     }
     
-    fn generate_output(&mut self) -> Result<String, String> { 
+    fn generate_output(&mut self) -> Result<String, String> {
         while self.pos < self.tokens.len() {
-            // println!("Processing token: {:?}, {:?}, current_string: {}\n\n\n", self.tokens[self.pos], self.tokens.get(self.pos+1).unwrap_or_else(|| {&Token::EndOfStatement}), self.output);  
             match &self.tokens[self.pos] {
                 Token::HtmlContent(content) => {
                     self.output.push_str(content);
@@ -140,7 +144,7 @@ impl TemplateCompiler {
                                 Err(e) => return Err(e),
                             }
                         } else {
-                            // FIXED: Use empty content for missing blocks instead of treating as variable
+                            // Use empty content for missing blocks
                             self.output.push_str(&format!("<!-- Block '{}' not defined -->", block_name));
                         }
                         self.pos += 1;
@@ -150,7 +154,6 @@ impl TemplateCompiler {
                 },
                 Token::BlockKeyword => {
                     // Skip over blocks in the second pass, as they're already processed
-                    // Find and skip to the end of this block
                     self.pos += 1; // Skip BlockKeyword
                     
                     // Skip block name
@@ -164,15 +167,15 @@ impl TemplateCompiler {
                     }
                     
                     // Find the matching endblock
-                    // let mut depth = 1;
-                    // while self.pos < self.tokens.len() && depth > 0 {
-                    //     match self.tokens[self.pos] {
-                    //         Token::BlockKeyword => depth += 1,
-                    //         Token::EndBlockKeyword => depth -= 1,
-                    //         _ => {}
-                    //     }
-                    //     self.pos += 1;
-                    // }
+                    let mut depth = 1;
+                    while self.pos < self.tokens.len() && depth > 0 {
+                        match self.tokens[self.pos] {
+                            Token::BlockKeyword => depth += 1,
+                            Token::EndBlockKeyword => depth -= 1,
+                            _ => {}
+                        }
+                        self.pos += 1;
+                    }
                 },
                 Token::EndBlockKeyword => {
                     // Skip EndBlockKeyword as it's handled when skipping blocks
@@ -196,119 +199,18 @@ impl TemplateCompiler {
                     self.output.push_str(&value.interal_value_as_string());
                 },
                 Token::DelKeyword => {
-                    self.pos += 1;
-                    if let Some(Token::Identifier(name)) = self.tokens.get(self.pos) {
-                        let name = name.clone(); // Clone the name to own it
-                        self.data.remove(&name);
-                        self.pos += 1;
-                        
-                        // Handle dictionary deletion
-                        if self.pos < self.tokens.len() && matches!(self.tokens[self.pos], Token::LeftSquareBracket) {
-                            self.pos += 1;
-                            
-                            // Evaluate the key and store it
-                            let key_string = {
-                                let key = self.evaluate_expression()?;
-                                key.interal_value_as_string()
-                            };
-                
-                            // Now we can safely use both name and key_string
-                            if matches!(self.tokens.get(self.pos), Some(Token::RightSquareBracket)) {
-                                self.pos += 1;
-                                
-                                // Get the dictionary and remove the key
-                                if let Some(Obj::Dictionary(dict)) = self.data.get_mut(&name) {
-                                    dict.remove(&key_string);
-                                }
-                            } else {
-                                return Err("Expected closing bracket after dictionary key".to_string());
-                            }
-                        }
-                    } else {
-                        return Err("Expected identifier after del keyword".to_string());
-                    }
-                }, 
+                    self.handle_deletion()?;
+                },
                 Token::Identifier(name) => {
                     let var_name = name.clone();
                     self.pos += 1;
                     
-                    // Check for array/dictionary access
-                    if matches!(self.tokens.get(self.pos), Some(Token::LeftSquareBracket)) {
-                        self.pos += 1;
-                        let index = self.evaluate_expression()?;
-                        
-                        if !matches!(self.tokens.get(self.pos), Some(Token::RightSquareBracket)) {
-                            return Err("Expected closing bracket after array/dictionary index".to_string());
-                        }
-                        self.pos += 1;
-                        
-                        // Handle assignment to indexed element
-                        if matches!(self.tokens.get(self.pos), Some(Token::Assignment)) {
-                            self.pos += 1;
-                            let value = self.evaluate_expression()?;
-                            
-                            // Update collection
-                            if let Some(collection) = self.data.get_mut(&var_name) {
-                                match collection {
-                                    Obj::List(list) => {
-                                        if let Obj::Numerical(i) = &index {
-                                            let idx = *i as usize;
-                                            if idx < list.len() {
-                                                list[idx] = value;
-                                            } else {
-                                                return Err(format!("Index {} out of bounds for list {}", idx, var_name));
-                                            }
-                                        } else {
-                                            return Err("List index must be a number".to_string());
-                                        }
-                                    },
-                                    Obj::Dictionary(dict) => {
-                                        dict.insert(index.interal_value_as_string(), value);
-                                    },
-                                    _ => return Err(format!("{} is not a collection that can be indexed", var_name)),
-                                }
-                            } else {
-                                return Err(format!("Variable {} not found", var_name));
-                            }
-                        } else {
-                            // Just accessing, add result to output
-                            let value = if let Some(collection) = self.data.get(&var_name) {
-                                match collection {
-                                    Obj::List(list) => {
-                                        if let Obj::Numerical(i) = &index {
-                                            let idx = *i as usize;
-                                            if idx < list.len() {
-                                                list[idx].clone()
-                                            } else {
-                                                return Err(format!("Index {} out of bounds for list {}", idx, var_name));
-                                            }
-                                        } else {
-                                            return Err("List index must be a number".to_string());
-                                        }
-                                    },
-                                    Obj::Dictionary(dict) => {
-                                        dict.get(&index.interal_value_as_string()).cloned().unwrap_or(Obj::None)
-                                    },
-                                    _ => return Err(format!("{} is not a collection that can be indexed", var_name)),
-                                }
-                            } else {
-                                return Err(format!("Variable {} not found", var_name));
-                            };
-                            
+                    // Check for access operations (index, property, or assignment)
+                    match self.handle_variable_access(&var_name, true)? {
+                        Some(value) => {
                             self.output.push_str(&value.interal_value_as_string());
-                        }
-                    } else if matches!(self.tokens.get(self.pos), Some(Token::Assignment)) {
-                        // Simple variable assignment
-                        self.pos += 1;
-                        let value = self.evaluate_expression()?;
-                        self.data.insert(var_name, value);
-                    } else {
-                        // Just outputting the variable value
-                        if let Some(value) = self.data.get(&var_name) {
-                            self.output.push_str(&value.interal_value_as_string());
-                        } else {
-                            return Err(format!("Variable {} not found", var_name));
-                        }
+                        },
+                        None => {} // Assignment was handled in handle_variable_access
                     }
                 },
                 Token::EndOfStatement => {
@@ -322,6 +224,190 @@ impl TemplateCompiler {
         }
         
         Ok(self.output.clone()) 
+    }
+    
+    /// Handles variable access, including indexing, property access, and assignments
+    /// Returns Some(value) for read operations, None for write operations
+    fn handle_variable_access(&mut self, var_name: &str, output_to_stream: bool) -> Result<Option<Obj>, String> {
+        // Check if this is a property access or indexing
+        let mut value = match self.data.get(var_name) {
+            Some(v) => v.clone(),
+            None => {
+                if output_to_stream {
+                    self.output.push_str(
+                        &format!("<!-- There should be a value '{}' but not found -->", var_name)
+                    );
+                }
+                return Ok(Some(Obj::None));
+            }
+        };
+        
+        let mut access_chain_pos = self.pos;
+        
+        // Handle indexing with [] syntax
+        while matches!(self.tokens.get(access_chain_pos), Some(Token::LeftSquareBracket)) {
+            access_chain_pos += 1;
+            self.pos = access_chain_pos;
+            
+            // Evaluate the index expression
+            let index = self.evaluate_expression()?;
+            access_chain_pos = self.pos;
+            
+            if !matches!(self.tokens.get(access_chain_pos), Some(Token::RightSquareBracket)) {
+                return Err("Expected closing bracket after index".to_string());
+            }
+            access_chain_pos += 1;
+            
+            // Apply the indexing to get the new value
+            match &value {
+                Obj::List(list) => {
+                    match &index {
+                        Obj::Numerical(n) => {
+                            let idx = *n as usize;
+                            if idx < list.len() {
+                                value = list[idx].clone();
+                            } else if output_to_stream {
+                                self.output.push_str(
+                                    &format!("<!-- Index {} out of bounds for list -->", idx)
+                                );
+                                return Ok(Some(Obj::None));
+                            } else {
+                                return Err(format!("Index {} out of bounds for list", idx));
+                            }
+                        },
+                        _ => {
+                            if output_to_stream {
+                                self.output.push_str("<!-- List index must be a number -->");
+                                return Ok(Some(Obj::None));
+                            } else {
+                                return Err("List index must be a number".to_string());
+                            }
+                        }
+                    }
+                },
+                Obj::Dictionary(dict) => {
+                    // Allow both string literals and string expressions as keys
+                    let key = index.interal_value_as_string();
+                    if let Some(val) = dict.get(&key) {
+                        value = val.clone();
+                    } else if output_to_stream {
+                        self.output.push_str(
+                            &format!("<!-- Key '{}' not found in dictionary -->", key)
+                        );
+                        return Ok(Some(Obj::None));
+                    } else {
+                        return Err(format!("Key '{}' not found in dictionary", key));
+                    }
+                },
+                _ => {
+                    if output_to_stream {
+                        self.output.push_str(
+                            &format!("<!-- Cannot index into a {} value -->", value.type_of())
+                        );
+                        return Ok(Some(Obj::None));
+                    } else {
+                        return Err(format!("Cannot index into a {} value", value.type_of()));
+                    }
+                }
+            }
+        }
+        
+        // Handle dot notation for property/method access
+        if matches!(self.tokens.get(access_chain_pos), Some(Token::Dot)) {
+            access_chain_pos += 1;
+            
+            if let Some(Token::Identifier(prop_name)) = self.tokens.get(access_chain_pos).cloned() {
+                access_chain_pos += 1;
+                
+                // Handle built-in methods and properties
+                match &value {
+                    Obj::List(list) => {
+                        match prop_name.as_str() {
+                            "len" => value = Obj::Numerical(list.len() as f64),
+                            // Add more list methods here as needed
+                            _ => {
+                                if output_to_stream {
+                                    self.output.push_str(
+                                        &format!("<!-- No property/method '{}' on list -->", prop_name)
+                                    );
+                                    return Ok(Some(Obj::None));
+                                } else {
+                                    return Err(format!("No property/method '{}' on list", prop_name));
+                                }
+                            }
+                        }
+                    },
+                    Obj::Dictionary(dict) => {
+                        match prop_name.as_str() {
+                            "len" => value = Obj::Numerical(dict.len() as f64),
+                            // Add more dictionary methods here as needed
+                            _ => {
+                                // For dictionaries, treat dot notation as an alternative to [] indexing
+                                if let Some(val) = dict.get(&prop_name) {
+                                    value = val.clone();
+                                } else if output_to_stream {
+                                    self.output.push_str(
+                                        &format!("<!-- Key '{}' not found in dictionary -->", prop_name)
+                                    );
+                                    return Ok(Some(Obj::None));
+                                } else {
+                                    return Err(format!("Key '{}' not found in dictionary", prop_name));
+                                }
+                            }
+                        }
+                    },
+                    Obj::Str(s) => {
+                        match prop_name.as_str() {
+                            "len" => value = Obj::Numerical(s.len() as f64),
+                            // Add more string methods here as needed
+                            _ => {
+                                if output_to_stream {
+                                    self.output.push_str(
+                                        &format!("<!-- No property/method '{}' on string -->", prop_name)
+                                    );
+                                    return Ok(Some(Obj::None));
+                                } else {
+                                    return Err(format!("No property/method '{}' on string", prop_name));
+                                }
+                            }
+                        }
+                    },
+                    _ => {
+                        if output_to_stream {
+                            self.output.push_str(
+                                &format!("<!-- Type '{}' does not support properties/methods -->", value.type_of())
+                            );
+                            return Ok(Some(Obj::None));
+                        } else {
+                            return Err(format!("Type '{}' does not support properties/methods", value.type_of()));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update position after all access operations
+        self.pos = access_chain_pos;
+        
+        // Check if this is an assignment
+        if matches!(self.tokens.get(self.pos), Some(Token::Assignment)) {
+            self.pos += 1;
+            let new_value = self.evaluate_expression()?;
+            
+            // Handle the assignment based on the access chain
+            if self.pos == self.tokens.len() || !matches!(self.tokens.get(access_chain_pos-1), Some(Token::RightSquareBracket) | Some(Token::Dot)) {
+                // Simple variable assignment
+                self.data.insert(var_name.to_string(), new_value);
+            } else {
+                // Assignment to indexed/property value - this is complex and requires maintaining the path
+                // For now, we're not implementing this part fully
+                return Err("Assignment to indexed/property values not fully implemented".to_string());
+            }
+            
+            return Ok(None); // No value to output for assignments
+        }
+        
+        Ok(Some(value))
     }
     
     fn handle_assignment(&mut self) -> Result<(), String> {
@@ -340,6 +426,67 @@ impl TemplateCompiler {
             }
         } else {
             Err("Expected identifier after let keyword".to_string())
+        }
+    }
+    
+    fn handle_deletion(&mut self) -> Result<(), String> {
+        self.pos += 1; // Skip del keyword
+        
+        if let Some(Token::Identifier(name)) = self.tokens.get(self.pos) {
+            let var_name = name.clone();
+            self.pos += 1;
+            
+            // Handle simple variable deletion
+            if self.pos >= self.tokens.len() || !matches!(self.tokens.get(self.pos), Some(Token::LeftSquareBracket)) {
+                self.data.remove(&var_name);
+                return Ok(());
+            }
+            
+            // Handle deletion of dictionary/list element
+            self.pos += 1; // Skip left bracket
+            let index = self.evaluate_expression()?;
+            
+            if !matches!(self.tokens.get(self.pos), Some(Token::RightSquareBracket)) {
+                return Err("Expected closing bracket after index".to_string());
+            }
+            self.pos += 1; // Skip right bracket
+            
+            // Perform the deletion
+            if let Some(collection) = self.data.get_mut(&var_name) {
+                match collection {
+                    Obj::List(list) => {
+                        if let Obj::Numerical(i) = index {
+                            let idx = i as usize;
+                            if idx < list.len() {
+                                list.remove(idx);
+                            } else {
+                                self.output.push_str(
+                                    &format!("<!-- Index {} out of bounds for list {} -->", idx, var_name)
+                                );
+                            }
+                        } else {
+                            self.output.push_str("<!-- List index must be a number -->");
+                        }
+                    },
+                    Obj::Dictionary(dict) => {
+                        let key = index.interal_value_as_string();
+                        dict.remove(&key);
+                    },
+                    _ => {
+                        self.output.push_str(
+                            &format!("<!-- Cannot delete from a {} value -->", collection.type_of())
+                        );
+                    }
+                }
+            } else {
+                self.output.push_str(
+                    &format!("<!-- Variable '{}' not found -->", var_name)
+                );
+            }
+            
+            Ok(())
+        } else {
+            Err("Expected identifier after del keyword".to_string())
         }
     }
     
@@ -437,8 +584,12 @@ impl TemplateCompiler {
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect();
                     
-                    for (k, _) in entries {
-                        self.data.insert(loop_var.clone(), Obj::Str(k));
+                    for (k, v) in entries {
+                        // In this implementation, we'll make the loop variable an object with 'key' and 'value' properties
+                        let mut entry = HashMap::new();
+                        entry.insert("key".to_string(), Obj::Str(k));
+                        entry.insert("value".to_string(), v);
+                        self.data.insert(loop_var.clone(), Obj::Dictionary(entry));
                         
                         // Execute the loop body
                         let mut body_compiler = TemplateCompiler::new(
@@ -475,14 +626,18 @@ impl TemplateCompiler {
                         }
                     }
                 },
-                _ => return Err("For loop requires a list, dictionary, or number".to_string()),
+                _ => {
+                    self.output.push_str(
+                        &format!("<!-- For loop requires a list, dictionary, or number, got {} -->", collection.type_of())
+                    );
+                }
             }
             
             Ok(())
         } else {
             Err("Expected identifier after for keyword".to_string())
         }
-    } 
+    }
     
     fn handle_while_loop(&mut self) -> Result<(), String> {
         self.pos += 1; // Skip while keyword
@@ -528,12 +683,16 @@ impl TemplateCompiler {
                     self.output.push_str(&body_output);
                     self.data = body_compiler.data;
                 },
-                Err(e) => return Err(e),
+                Err(e) => {
+                    self.output.push_str(&format!("<!-- Error in while loop: {} -->", e));
+                    break; // Don't halt rendering on error
+                }
             }
             
             iteration += 1;
             if iteration == MAX_ITERATIONS {
-                return Err("While loop exceeded maximum iterations - possible infinite loop".to_string());
+                self.output.push_str("<!-- While loop exceeded maximum iterations - possible infinite loop -->");
+                break;
             }
         }
         
@@ -551,20 +710,38 @@ impl TemplateCompiler {
             },
             Token::OutputKeyword => {
                 self.pos += 1;
-                let value = self.evaluate_expression()?;
-                self.output.push_str(&value.interal_value_as_string());
+                match self.evaluate_expression() {
+                    Ok(value) => self.output.push_str(&value.interal_value_as_string()),
+                    Err(e) => self.output.push_str(&format!("<!-- Error evaluating expression: {} -->", e))
+                }
             },
             Token::LetKeyword => {
-                self.handle_assignment()?;
+                if let Err(e) = self.handle_assignment() {
+                    self.output.push_str(&format!("<!-- Error in assignment: {} -->", e));
+                }
             },
             Token::IfKeyword => {
-                self.handle_if_statement()?;
+                if let Err(e) = self.handle_if_statement() {
+                    self.output.push_str(&format!("<!-- Error in if statement: {} -->", e));
+                }
             },
             Token::ForKeyword => {
-                self.handle_for_loop()?;
+                if let Err(e) = self.handle_for_loop() {
+                    self.output.push_str(&format!("<!-- Error in for loop: {} -->", e));
+                }
             },
             Token::WhileKeyword => {
-                self.handle_while_loop()?;
+                if let Err(e) = self.handle_while_loop() {
+                    self.output.push_str(&format!("<!-- Error in while loop: {} -->", e));
+                }
+            },
+            Token::Identifier(name) => {
+                let var_name = name.clone();
+                self.pos += 1;
+                
+                if let Err(e) = self.handle_variable_access(&var_name, true) {
+                    self.output.push_str(&format!("<!-- Error accessing variable {}: {} -->", var_name, e));
+                }
             },
             Token::EndOfStatement => {
                 self.pos += 1;
@@ -578,15 +755,22 @@ impl TemplateCompiler {
     }
     
     fn evaluate_condition(&mut self) -> Result<bool, String> {
-        let expr_value = self.evaluate_expression()?;
-        
-        match expr_value {
-            Obj::Boolean(b) => Ok(b),
-            Obj::Numerical(n) => Ok(n != 0.0),
-            Obj::Str(s) => Ok(!s.is_empty()),
-            Obj::List(l) => Ok(!l.is_empty()),
-            Obj::Dictionary(d) => Ok(!d.is_empty()),
-            Obj::None => Ok(false),
+        match self.evaluate_expression() {
+            Ok(expr_value) => {
+                match expr_value {
+                    Obj::Boolean(b) => Ok(b),
+                    Obj::Numerical(n) => Ok(n != 0.0),
+                    Obj::Str(s) => Ok(!s.is_empty()),
+                    Obj::List(l) => Ok(!l.is_empty()),
+                    Obj::Dictionary(d) => Ok(!d.is_empty()),
+                    Obj::None => Ok(false),
+                }
+            },
+            Err(e) => {
+                // Instead of failing, return false for invalid conditions
+                self.output.push_str(&format!("<!-- Error in condition: {} -->", e));
+                Ok(false)
+            }
         }
     }
     
@@ -630,47 +814,10 @@ impl TemplateCompiler {
                 let var_name = name.clone();
                 self.pos += 1;
                 
-                // Check for array/dictionary access
-                if matches!(self.tokens.get(self.pos), Some(Token::LeftSquareBracket)) {
-                    self.pos += 1;
-                    let index = self.evaluate_expression()?;
-                    
-                    if matches!(self.tokens.get(self.pos), Some(Token::RightSquareBracket)) {
-                        self.pos += 1;
-                        
-                        // Access collection element
-                        if let Some(collection) = self.data.get(&var_name) {
-                            match collection {
-                                Obj::List(list) => {
-                                    if let Obj::Numerical(i) = &index {
-                                        let idx = *i as usize;
-                                        if idx < list.len() {
-                                            Ok(list[idx].clone())
-                                        } else {
-                                            Err(format!("Index {} out of bounds for list {}", idx, var_name))
-                                        }
-                                    } else {
-                                        Err("List index must be a number".to_string())
-                                    }
-                                },
-                                Obj::Dictionary(dict) => {
-                                    Ok(dict.get(&index.interal_value_as_string()).cloned().unwrap_or(Obj::None))
-                                },
-                                _ => Err(format!("{} is not a collection that can be indexed", var_name)),
-                            }
-                        } else {
-                            Err(format!("Variable {} not found", var_name))
-                        }
-                    } else {
-                        Err("Expected closing bracket after array/dictionary index".to_string())
-                    }
-                } else {
-                    // Simple variable access
-                    if let Some(value) = self.data.get(&var_name) {
-                        Ok(value.clone())
-                    } else {
-                        Err(format!("Variable {} not found", var_name))
-                    }
+                // Use the centralized variable access method
+                match self.handle_variable_access(&var_name, false)? {
+                    Some(value) => Ok(value),
+                    None => Ok(Obj::None) // Should never happen in expression context
                 }
             },
             Token::LeftParen => {
@@ -679,7 +826,15 @@ impl TemplateCompiler {
                 
                 if matches!(self.tokens.get(self.pos), Some(Token::RightParen)) {
                     self.pos += 1;
-                    Ok(expr)
+                    
+                    // After a parenthesized expression, check if there's property access or indexing
+                    if matches!(self.tokens.get(self.pos), Some(Token::Dot)) {
+                        self.handle_property_access(expr)
+                    } else if matches!(self.tokens.get(self.pos), Some(Token::LeftSquareBracket)) {
+                        self.handle_indexing(expr)
+                    } else {
+                        Ok(expr)
+                    }
                 } else {
                     Err("Expected closing parenthesis".to_string())
                 }
@@ -703,6 +858,86 @@ impl TemplateCompiler {
                 }
             },
             _ => Err(format!("Unexpected token in expression: {:?}", self.tokens[self.pos])),
+        }
+    }
+    
+    // Handle property access with dot notation
+    fn handle_property_access(&mut self, obj: Obj) -> Result<Obj, String> {
+        self.pos += 1; // Skip the dot
+        
+        if let Some(Token::Identifier(prop_name)) = self.tokens.get(self.pos).cloned() {
+            self.pos += 1;
+            
+            match &obj {
+                Obj::List(list) => {
+                    match prop_name.as_str() {
+                        "len" => Ok(Obj::Numerical(list.len() as f64)),
+                        // Add other list methods as needed
+                        _ => Err(format!("No property/method '{}' on list", prop_name)),
+                    }
+                },
+                Obj::Dictionary(dict) => {
+                    match prop_name.as_str() {
+                        "len" => Ok(Obj::Numerical(dict.len() as f64)),
+                        // Try to get the property by name
+                        _ => {
+                            if let Some(val) = dict.get(&prop_name) {
+                                Ok(val.clone())
+                            } else {
+                                Err(format!("Key '{}' not found in dictionary", prop_name))
+                            }
+                        }
+                    }
+                },
+                Obj::Str(s) => {
+                    match prop_name.as_str() {
+                        "len" => Ok(Obj::Numerical(s.len() as f64)),
+                        // Add other string methods as needed
+                        _ => Err(format!("No property/method '{}' on string", prop_name)),
+                    }
+                },
+                _ => Err(format!("Type '{}' does not support properties/methods", obj.type_of()))
+            }
+        } else {
+            Err("Expected identifier after dot".to_string())
+        }
+    }
+    
+    // Handle indexing with [] syntax
+    fn handle_indexing(&mut self, obj: Obj) -> Result<Obj, String> {
+        self.pos += 1; // Skip the left bracket
+        
+        let index = self.evaluate_expression()?;
+        
+        if !matches!(self.tokens.get(self.pos), Some(Token::RightSquareBracket)) {
+            return Err("Expected closing bracket after index".to_string());
+        }
+        self.pos += 1; // Skip the right bracket
+        
+        match &obj {
+            Obj::List(list) => {
+                match &index {
+                    Obj::Numerical(n) => {
+                        let idx = *n as usize;
+                        if idx < list.len() {
+                            Ok(list[idx].clone())
+                        } else {
+                            Err(format!("Index {} out of bounds for list", idx))
+                        }
+                    },
+                    _ => Err("List index must be a number".to_string())
+                }
+            },
+            Obj::Dictionary(dict) => {
+                // Allow both string literals and string expressions as keys
+                let key = index.interal_value_as_string();
+                if let Some(val) = dict.get(&key) {
+                    Ok(val.clone())
+                } else {
+                    Err(format!("Key '{}' not found in dictionary", key))
+                }
+            },
+            _ => Err(format!("Cannot index into a {} value", obj.type_of()))
         }
     }
     
@@ -830,6 +1065,16 @@ impl TemplateCompiler {
                     Err("Only addition is supported for strings".to_string())
                 }
             },
+            (Obj::List(mut l), Obj::List(r)) => {
+                if op(1.0, 1.0) == 2.0 {
+                    // Concatenate lists
+                    let mut result = l;
+                    result.extend(r);
+                    Ok(Obj::List(result))
+                } else {
+                    Err("Only addition is supported for lists".to_string())
+                }
+            },
             _ => Err("Type mismatch for binary operation".to_string()),
         }
     }
@@ -867,6 +1112,8 @@ impl TemplateCompiler {
             Token::Plus | Token::Minus => 50,
             Token::Multiply | Token::Divide | Token::Modulus => 60,
             Token::Exponent => 70,
+            Token::Dot => 90, // Highest precedence for property access
+            Token::LeftSquareBracket => 90, // Highest precedence for array indexing
             _ => 0,
         }
     }
@@ -881,5 +1128,4 @@ impl TemplateCompiler {
             Obj::None => false,
         }
     }
-}
-
+} 
