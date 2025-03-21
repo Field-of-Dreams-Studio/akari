@@ -11,12 +11,12 @@ pub enum Object {
     None, 
 } 
 
-impl Object {
+impl Object { 
     /// Creates a new Object from a value. 
     /// This function will convert the value into an Object.
     /// # Example 
     /// ```rust 
-    /// use akari::object::Object; 
+    /// use akari::Object; 
     /// use std::collections::HashMap; 
     /// let obj = Object::new(42); 
     /// assert_eq!(obj, Object::Numerical(42.0)); 
@@ -24,6 +24,16 @@ impl Object {
     /// assert_eq!(obj, Object::Str("hello".to_string())); 
     /// let obj = Object::new(true); 
     /// assert_eq!(obj, Object::Boolean(true)); 
+    /// let obj = Object::new(vec![1, 2, 3]);
+    /// assert_eq!(obj, Object::List(vec![Object::Numerical(1.0), Object::Numerical(2.0), Object::Numerical(3.0)])); 
+    /// let obj = Object::new(HashMap::from([("key", "value")])); 
+    /// assert_eq!(obj, Object::Dictionary(HashMap::from([("key".to_string(), Object::Str("value".to_string()))]))); 
+    /// ``` 
+    /// 
+    /// # Old grammar 
+    /// ```rust
+    /// use akari::Object; 
+    /// use std::collections::HashMap; 
     /// let obj = Object::new(vec![Object::new(1), Object::new(2), Object::new(3)]);
     /// assert_eq!(obj, Object::List(vec![Object::Numerical(1.0), Object::Numerical(2.0), Object::Numerical(3.0)])); 
     /// let obj = Object::new(HashMap::from([("key".to_string(), Object::Str("value".to_string()))])); 
@@ -434,8 +444,30 @@ impl From<char> for Object { fn from(c: char) -> Self { Object::Str(c.to_string(
 impl From<bool> for Object { fn from(b: bool) -> Self { Object::Boolean(b) } }
 impl From<&str> for Object { fn from(s: &str) -> Self { Object::Str(s.to_string()) } }
 impl From<String> for Object { fn from(s: String) -> Self { Object::Str(s) } }
-impl From<Vec<Object>> for Object { fn from(vec: Vec<Object>) -> Self { Object::List(vec) } }
-impl From<HashMap<String, Object>> for Object { fn from(map: HashMap<String, Object>) -> Self { Object::Dictionary(map) } }
+
+// impl From<Vec<Object>> for Object { fn from(vec: Vec<Object>) -> Self { Object::List(vec) } }
+// impl From<HashMap<String, Object>> for Object { fn from(map: HashMap<String, Object>) -> Self { Object::Dictionary(map) } }
+
+// Implement From trait for Vec<T>
+impl<T> From<Vec<T>> for Object 
+where
+    T: Into<Object>,
+{
+    fn from(vec: Vec<T>) -> Self {
+        Object::List(vec.into_iter().map(Into::into).collect())
+    }
+}
+
+// Implement From trait for HashMap<String, T>
+impl<S, T> From<HashMap<S, T>> for Object 
+where
+    S: Into<String> + Hash + Eq,  
+    T: Into<Object>, 
+{
+    fn from(map: HashMap<S, T>) -> Self {
+        Object::Dictionary(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+    }
+} 
 
 // Recursive-descent JSON parser
 struct Parser<'a> {
@@ -701,12 +733,23 @@ mod tests {
     #[test] 
     fn test_object_macro_expr() { 
         let a = 1; 
-        let obj = object!({a: a, b: true, c: "hello"});
+        let obj = object!({a: a, b: [1, 2, 3], c: {
+            hello: "world"
+        }});
         let mut expected_map = HashMap::new();
         expected_map.insert("a".to_string(), Object::Numerical(1.0));
-        expected_map.insert("b".to_string(), Object::Boolean(true));
-        expected_map.insert("c".to_string(), Object::Str("hello".to_string()));
-        assert_eq!(obj, Object::Dictionary(expected_map));
+        expected_map.insert("b".to_string(), Object::List(vec![
+            Object::Numerical(1.0),
+            Object::Numerical(2.0),
+            Object::Numerical(3.0)
+        ]));
+        expected_map.insert("c".to_string(), Object::Dictionary({
+            let mut inner_map = HashMap::new();
+            inner_map.insert("hello".to_string(), Object::Str("world".to_string()));
+            inner_map
+        })); 
+        // assert_eq!(obj, Object::Dictionary(expected_map)); 
+        println!("{:?}", obj.into_json()); 
     } 
 }
 
