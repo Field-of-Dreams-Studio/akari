@@ -357,30 +357,40 @@ impl Object {
             _ => "".to_string(),
         }
     } 
-}
 
-impl std::fmt::Display for Object {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub fn format(&self) -> String {
         match self {
-            Object::None => write!(f, "none"), 
-            Object::Numerical(n) => write!(f, "{}", n),
-            Object::Boolean(b) => write!(f, "{}", b),
-            Object::Str(s) => write!(f, "\"{}\"", s),
+            Object::None => "none".to_string(),
+            Object::Numerical(n) => format!("{}", n),
+            Object::Boolean(b) => format!("{}", b),
+            Object::Str(s) => format!("\"{}\"", s),
             Object::List(l) => {
                 let mut result = String::new();
-                for item in l { result.push_str(&format!("{}, ", item)); }
-                if result.len() >= 2 { result.truncate(result.len() - 2); }
-                write!(f, "[{}]", result)
+                for item in l {
+                    result.push_str(&format!("{}, ", item));
+                }
+                if result.len() >= 2 {
+                    result.truncate(result.len() - 2);
+                }
+                format!("[{}]", result)
             }
             Object::Dictionary(d) => {
                 let mut result = String::new();
                 for (key, value) in d {
                     result.push_str(&format!("{} {} = {}, ", value.type_of(), key, value));
                 }
-                if result.len() >= 2 { result.truncate(result.len() - 2); }
-                write!(f, "{{{}}}", result)
+                if result.len() >= 2 {
+                    result.truncate(result.len() - 2);
+                }
+                format!("{{{}}}", result)
             }
         }
+    } 
+}
+
+impl std::fmt::Display for Object { 
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Object::format(self)) 
     }
 } 
 
@@ -425,6 +435,13 @@ impl Hash for Object {
 // Implement Eq trait (required since we already have PartialEq)
 impl Eq for Object {} 
 
+// Implement Into<String> trait 
+impl Into<String> for Object {
+    fn into(self) -> String {
+        self.to_string() 
+    } 
+} 
+
 // From implementations
 impl From<i8> for Object { fn from(n: i8) -> Self { Object::Numerical(n as f64) } }
 impl From<i16> for Object { fn from(n: i16) -> Self { Object::Numerical(n as f64) } }
@@ -444,6 +461,7 @@ impl From<char> for Object { fn from(c: char) -> Self { Object::Str(c.to_string(
 impl From<bool> for Object { fn from(b: bool) -> Self { Object::Boolean(b) } }
 impl From<&str> for Object { fn from(s: &str) -> Self { Object::Str(s.to_string()) } }
 impl From<String> for Object { fn from(s: String) -> Self { Object::Str(s) } }
+impl From<&String> for Object { fn from(s: &String) -> Self { Object::Str(s.clone()) } } 
 
 // impl From<Vec<Object>> for Object { fn from(vec: Vec<Object>) -> Self { Object::List(vec) } }
 // impl From<HashMap<String, Object>> for Object { fn from(map: HashMap<String, Object>) -> Self { Object::Dictionary(map) } }
@@ -749,8 +767,8 @@ mod tests {
             inner_map
         })); 
         // assert_eq!(obj, Object::Dictionary(expected_map)); 
+        println!("{:?}", obj.format()); 
         println!("{:?}", obj.into_json()); 
     } 
 }
 
-  

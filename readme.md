@@ -20,6 +20,10 @@ This crate is used by Starberry since 0.3.0
 
 # Update log 
 
+0.1.3: Important Bug Fix: Now template will not causing rendering empty HTML 
+
+The 
+
 0.1.2: Changed object! macro, enable nesting objects 
 
 0.1.1: Enable [] operation and . operation 

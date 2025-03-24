@@ -115,7 +115,7 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     let template_dir = Path::new("./temp_templates");
     if !template_dir.exists() {
         fs::create_dir(template_dir)?;
-    }
+    } 
     
     // Create a base layout template
     let base_layout = r#"<!DOCTYPE html>

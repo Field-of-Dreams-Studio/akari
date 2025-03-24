@@ -167,15 +167,15 @@ impl TemplateCompiler {
                     }
                     
                     // Find the matching endblock
-                    let mut depth = 1;
-                    while self.pos < self.tokens.len() && depth > 0 {
-                        match self.tokens[self.pos] {
-                            Token::BlockKeyword => depth += 1,
-                            Token::EndBlockKeyword => depth -= 1,
-                            _ => {}
-                        }
-                        self.pos += 1;
-                    }
+                    // let mut depth = 1;
+                    // while self.pos < self.tokens.len() && depth > 0 {
+                    //     match self.tokens[self.pos] {
+                    //         Token::BlockKeyword => depth += 1,
+                    //         Token::EndBlockKeyword => depth -= 1,
+                    //         _ => {}
+                    //     }
+                    //     self.pos += 1;
+                    // } 
                 },
                 Token::EndBlockKeyword => {
                     // Skip EndBlockKeyword as it's handled when skipping blocks
