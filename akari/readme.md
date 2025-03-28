@@ -20,9 +20,9 @@ This crate is used by Starberry since 0.3.0
 
 # Update log 
 
-0.1.3: Important Bug Fix: Now template will not causing rendering empty HTML 
+0.2.0-rc1: Update the macro, enable using complex expression and functions in the macro 
 
-The 
+0.1.3: Important Bug Fix: Now template will not causing rendering empty HTML 
 
 0.1.2: Changed object! macro, enable nesting objects 
 

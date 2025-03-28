@@ -642,72 +642,82 @@ impl<'a> Parser<'a> {
     }
 } 
 
-/// A macro to create an Object from a literal or expression. 
-/// It can handle dictionaries, lists, booleans, strings, and numeric values. 
-/// # Example 
-/// ```rust 
-/// use akari::object::Object; 
-/// use akari::object; 
-/// let num_obj = object!(3); 
-/// assert_eq!(num_obj, Object::Numerical(3.0)); 
-/// ```
-/// ```rust 
-/// use akari::object::Object;  
-/// use std::collections::HashMap; 
-/// use akari::object; 
-/// let list_obj = object!(["aaa", "bbb"]); 
-/// assert_eq!(list_obj, Object::List(vec![Object::Str("aaa".to_string()), Object::Str("bbb".to_string())]));  
-/// ``` 
-/// ```rust 
-/// use akari::object::Object; 
-/// use std::collections::HashMap; 
-/// use akari::object; 
-/// let obj_obj = object!({c: "p", b: ["aaa", "bbb"], u: 32});  
-/// assert_eq!(obj_obj, Object::Dictionary(HashMap::from([
-///     ("c".to_string(), Object::Str("p".to_string())),
-///     ("b".to_string(), Object::List(vec![Object::Str("aaa".to_string()), Object::Str("bbb".to_string())])), 
-///     ("u".to_string(), Object::Numerical(32.0)),
-/// ]))); 
-/// ```
+// /// A macro to create an Object from a literal or expression. 
+// /// It can handle dictionaries, lists, booleans, strings, and numeric values. 
+// /// # Example 
+// /// ```rust 
+// /// use akari::Object; 
+// /// use akari::object; 
+// /// let num_obj = object!(3); 
+// /// assert_eq!(num_obj, Object::Numerical(3.0)); 
+// /// ```
+// /// ```rust 
+// /// use akari::Object;  
+// /// use std::collections::HashMap; 
+// /// use akari::object; 
+// /// let list_obj = object!(["aaa", "bbb"]); 
+// /// assert_eq!(list_obj, Object::List(vec![Object::Str("aaa".to_string()), Object::Str("bbb".to_string())]));  
+// /// ``` 
+// /// ```rust 
+// /// use akari::Object; 
+// /// use std::collections::HashMap; 
+// /// use akari::object; 
+// /// let obj_obj = object!({c: "p", b: ["aaa", "bbb"], u: 32});  
+// /// assert_eq!(obj_obj, Object::Dictionary(HashMap::from([
+// ///     ("c".to_string(), Object::Str("p".to_string())),
+// ///     ("b".to_string(), Object::List(vec![Object::Str("aaa".to_string()), Object::Str("bbb".to_string())])), 
+// ///     ("u".to_string(), Object::Numerical(32.0)),
+// /// ]))); 
+// /// ```
+// /// ```rust 
+// /// use akari::Object; 
+// /// use std::collections::HashMap; 
+// /// use akari::object; 
+// /// let obj_obj = object!({
+// ///     string: String::from("hello"), 
+// ///     number: 42
+// /// }); 
+// /// ```
  
-#[macro_export]
-macro_rules! object {
-    // Dictionary: keys become Strings now.
-    ({ $( $key:ident : $value:tt ),* $(,)? }) => {{
-        let mut map = ::std::collections::HashMap::new();
-        $(
-            map.insert(stringify!($key).to_string(), object!($value));
-        )*
-        Object::Dictionary(map)
-    }};
-    // List
-    ([ $( $elem:tt ),* $(,)? ]) => {{
-        let mut vec = Vec::new();
-        $(
-            vec.push(object!($elem));
-        )*
-        Object::List(vec)
-    }};
-    // Booleans
-    (true) => {
-        Object::new(true)
-    };
-    (false) => {
-        Object::new(false)
-    };
-    // String literals
-    ($e:literal) => {
-        Object::new($e)
-    };
-    // Fallback for expressions (like numbers)
-    ($e:expr) => {
-        Object::new($e)
-    };
-}  
+// #[macro_export]
+// macro_rules! object {
+//     // Dictionary: keys become Strings now.
+//     ({ $( $key:ident : $value:tt ),* $(,)? }) => {{
+//         let mut map = ::std::collections::HashMap::new();
+//         $(
+//             map.insert(stringify!($key).to_string(), object!($value));
+//         )*
+//         Object::Dictionary(map)
+//     }}; 
+//     // List
+//     ([ $( $elem:tt ),* $(,)? ]) => {{
+//         let mut vec = Vec::new();
+//         $(
+//             vec.push(object!($elem));
+//         )*
+//         Object::List(vec)
+//     }};
+//     // Booleans
+//     (true) => {
+//         Object::new(true)
+//     };
+//     (false) => {
+//         Object::new(false)
+//     };
+//     // String literals
+//     ($e:literal) => {
+//         Object::new($e)
+//     };
+//     // Fallback for expressions (like numbers)
+//     ($e:expr) => {
+//         Object::new($e)
+//     };
+// }  
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; 
+    use crate::object; 
     
     #[test]
     fn test_from_json_object() {
@@ -770,5 +780,116 @@ mod tests {
         println!("{:?}", obj.format()); 
         println!("{:?}", obj.into_json()); 
     } 
+
+    #[test]
+    fn test_numerical_object() {
+        let num_obj = object!(3);
+        assert_eq!(num_obj, Object::Numerical(3.0));
+    }
+
+    #[test]
+    fn test_list_object() {
+        let list_obj = object!(["aaa", "bbb"]);
+        assert_eq!(
+            list_obj, 
+            Object::List(vec![
+                Object::Str("aaa".to_string()), 
+                Object::Str("bbb".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_dictionary_object() {
+        let obj_obj = object!({c: String::from("p"), b: [String::from("aaa"), "bbb"], u: 32}); 
+        println!("{:?}", obj_obj.format()); 
+        assert_eq!(
+            obj_obj, 
+            Object::Dictionary(HashMap::from([
+                ("c".to_string(), Object::Str("p".to_string())),
+                ("b".to_string(), Object::List(vec![
+                    Object::Str("aaa".to_string()), 
+                    Object::Str("bbb".to_string())
+                ])),
+                ("u".to_string(), Object::Numerical(32.0)),
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_complex_expressions() {
+        let obj_obj = object!({
+            string: String::from("hello"),
+            number: 42
+        });
+        
+        let expected = {
+            let mut map = HashMap::new();
+            map.insert("string".to_string(), Object::Str("hello".to_string()));
+            map.insert("number".to_string(), Object::Numerical(42.0));
+            Object::Dictionary(map)
+        };
+        
+        assert_eq!(obj_obj, expected);
+    }
+
+    #[test]
+    fn test_nested_objects() {
+        let nested_obj = object!({
+            name: "nested_test",
+            properties: {
+                boolean: true,
+                list: [1, 2, 3],
+                complex: {
+                    value: String::from("nested value"),
+                    flag: false
+                }
+            }
+        });
+        
+        // Building expected object manually for verification
+        let mut inner_complex = HashMap::new();
+        inner_complex.insert("value".to_string(), Object::Str("nested value".to_string()));
+        inner_complex.insert("flag".to_string(), Object::Boolean(false));
+        
+        let mut properties = HashMap::new();
+        properties.insert("boolean".to_string(), Object::Boolean(true));
+        properties.insert("list".to_string(), Object::List(vec![
+            Object::Numerical(1.0),
+            Object::Numerical(2.0),
+            Object::Numerical(3.0)
+        ]));
+        properties.insert("complex".to_string(), Object::Dictionary(inner_complex));
+        
+        let mut root = HashMap::new();
+        root.insert("name".to_string(), Object::Str("nested_test".to_string()));
+        root.insert("properties".to_string(), Object::Dictionary(properties));
+        
+        let expected = Object::Dictionary(root);
+        
+        assert_eq!(nested_obj, expected);
+    }  
+
+    #[test] 
+    fn test_object_6(){ 
+        let obj = object!({
+            a: 1, 
+            b: true, 
+            c: "hello", 
+            d: [1, 2, 3], 
+            e: {x: 10, y: 20}, 
+            f: {
+                a: [String::from("1"), String::from("2")], 
+                b: ["1", "2"], 
+                c: [String::from("1"), "2"]
+            }, 
+            g: [ 
+                {a: String::from("1"), b: 2}, 
+                {a: 3, b: 4}, 
+                {a: String::from("1"), b: String::from("1")} 
+            ]
+        }); 
+        println!("{:?}", obj.into_json()); 
+    }
 }
 

@@ -1,12 +1,5 @@
-[package]
-name = "akari"
-version = "0.1.2"
-edition = "2024" 
-authors = ["Redstone <redstone@fds.moe>"] 
-description = "Template rendering language" 
-repository = "https://github.com/Field-of-Dreams-Studio/akari" 
-license = "GPL-3.0-or-later" 
-categories = ["network-programming", "web-programming::http-server" ] 
-keywords = ["template-rendering", "frontend"]  
-
-[dependencies] 
+[workspace]
+members = [
+    "akari", 
+    "am", 
+] 

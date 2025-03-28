@@ -13,6 +13,7 @@ pub use object::Object;
 pub use parse::Token;
 pub use compile::compile;
 pub use template_manager::TemplateManager; 
+pub use akari_macro::object; 
 
 /// Renders a template string with provided data
 ///
