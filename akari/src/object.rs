@@ -90,7 +90,27 @@ impl Object {
                 format!("{{{}}}", result)
             }
         }
-    }
+    } 
+
+    /// Converts the Object into a JSON string representation and writes it to a file. 
+    /// This function will return an error if the file cannot be written. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Object; 
+    /// use akari::object; 
+    /// // Write a JSON file at "data.json" by using into_jsonf 
+    /// object!({
+    ///    key: "value", 
+    ///    number: 42, 
+    ///    list: [1, 2, 3], 
+    /// }).into_jsonf("data.json").expect("Failed to write JSON file"); 
+    /// ``` 
+    pub fn into_jsonf(&self, file_path: &str) -> Result<(), String> {
+        use std::fs;
+        let json = self.into_json();
+        fs::write(file_path, json).map_err(|e| format!("Failed to write JSON file: {}", e))?;
+        Ok(())
+    } 
     
     /// Parses a JSON string and returns an Object. 
     /// This function will return an error if the JSON is invalid or if there are extra characters after the JSON value. 
@@ -116,6 +136,32 @@ impl Object {
         }
         Ok(value)
     } 
+
+    /// Parses a JSON file and returns an Object. 
+    /// This function will return an error if the file cannot be read or if the JSON is invalid. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Object; 
+    /// use akari::object; 
+    /// use std::fs; 
+    /// // Create a JSON file at "data.json" 
+    /// fs::write("data.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap(); 
+    /// // Read the JSON file and parse it into an Object 
+    /// let obj = Object::from_jsonf("data.json").expect("Failed to parse JSON file"); 
+    /// assert_eq!(obj, object!({
+    ///    key: "value",
+    ///    number: 42, 
+    ///    list: [1, 2, 3], 
+    /// })); 
+    /// // Delete the JSON file after use 
+    /// fs::remove_file("data.json").unwrap(); 
+    /// ``` 
+    pub fn from_jsonf(file_path: &str) -> Result<Self, String> {
+        use std::fs;
+        let content = fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read JSON file: {}", e))?;
+        Self::from_json(&content) 
+    }
 
     /// Retrieves a value from the dictionary by path. 
     /// This function will return None if the path is invalid or if the key does not exist. 

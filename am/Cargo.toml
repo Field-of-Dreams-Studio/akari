@@ -1,7 +1,13 @@
 [package]
 name = "akari_macro"
 version = "0.1.0"
-edition = "2024"
+edition = "2024" 
+authors = ["Redstone <redstone@fds.moe>"] 
+description = "Macro for Akari" 
+repository = "https://github.com/Field-of-Dreams-Studio/akari" 
+license = "GPL-3.0-or-later" 
+categories = ["network-programming", "web-programming::http-server" ] 
+keywords = ["template-rendering", "frontend"]   
 
 [dependencies] 
 syn = { version = "1.0", features = ["full", "extra-traits"] }

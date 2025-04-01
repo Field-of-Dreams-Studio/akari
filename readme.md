@@ -20,8 +20,6 @@ This crate is used by Starberry since 0.3.0
 
 # Update log 
 
-0.2.0: Enable json file read and write 
-
 0.2.0-rc1: Update the macro, enable using complex expression and functions in the macro 
 
 0.1.3: Important Bug Fix: Now template will not causing rendering empty HTML 
