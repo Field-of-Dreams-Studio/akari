@@ -20,6 +20,8 @@ This crate is used by Starberry since 0.3.0
 
 # Update log 
 
+0.2.1-rc1: Enabling getting value from the Object through one function, no need for a match statement 
+
 0.2.0: Enable json file read and write 
 
 0.2.0-rc1: Update the macro, enable using complex expression and functions in the macro 

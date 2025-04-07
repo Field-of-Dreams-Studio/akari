@@ -52,7 +52,67 @@ impl Object {
             Object::Dictionary(_) => "dict".to_string(),
             Object::None => "none".to_string(), 
         }
-    }
+    } 
+
+    /// Converts the Object into a numerical value. 
+    /// This function will return a numerical value based on the type of the Object. 
+    /// If the Object is not a number, it will return 0.0. 
+    /// If the object is a boolean, it will return 1.0 for true and 0.0 for false. 
+    pub fn numerical(&self) -> f64 {
+        match self {
+            Object::Numerical(n) => *n,
+            Object::Boolean(b) => if *b { 1.0 } else { 0.0 },
+            Object::Str(s) => s.parse::<f64>().unwrap_or(0.0),
+            Object::List(l) => l.len() as f64,
+            Object::Dictionary(d) => d.len() as f64,
+            Object::None => 0.0, 
+        }
+    } 
+
+    /// Converts the Object into an integer value. 
+    /// The rule is the same as numerical, but it will return an i64 value. 
+    pub fn integer(&self) -> i64 {
+        match self {
+            Object::Numerical(n) => *n as i64,
+            Object::Boolean(b) => if *b { 1 } else { 0 },
+            Object::Str(s) => s.parse::<i64>().unwrap_or(0),
+            Object::List(l) => l.len() as i64,
+            Object::Dictionary(d) => d.len() as i64,
+            Object::None => 0, 
+        }
+    } 
+
+    /// Converts the Object into a boolean value. 
+    pub fn boolean(&self) -> bool {
+        match self {
+            Object::Numerical(n) => *n != 0.0,
+            Object::Boolean(b) => *b,
+            Object::Str(s) => !s.is_empty(),
+            Object::List(l) => !l.is_empty(),
+            Object::Dictionary(d) => !d.is_empty(),
+            Object::None => false, 
+        }
+    } 
+
+    /// Converts the Object into a string representation. 
+    pub fn string(&self) -> String {
+        match self {
+            Object::None => "".to_string(), 
+            Object::Numerical(n) => n.to_string(),
+            Object::Boolean(b) => b.to_string(),
+            Object::Str(s) => s.clone(),
+            _ => self.format(), // Use the format method for other types 
+        }
+    } 
+
+    /// Converts the Object into a list of Objects. 
+    pub fn list(&self) -> Vec<Object> {
+        match self {
+            Object::List(l) => l.clone(),
+            Object::Dictionary(d) => d.values().cloned().collect(),
+            _ => vec![self.clone()],
+        }
+    } 
     
     /// Converts the Object into a JSON string representation. 
     /// This function will return a string that is a valid JSON representation of the Object. 
@@ -432,6 +492,7 @@ impl Object {
             }
         }
     } 
+
 }
 
 impl std::fmt::Display for Object { 
@@ -532,6 +593,23 @@ where
         Object::Dictionary(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
     }
 } 
+
+impl Into<i8> for Object { fn into(self) -> i8 { self.integer() as i8 } } 
+impl Into<i16> for Object { fn into(self) -> i16 { self.integer() as i16 } } 
+impl Into<i32> for Object { fn into(self) -> i32 { self.integer() as i32 } } 
+impl Into<i64> for Object { fn into(self) -> i64 { self.integer() as i64 } } 
+impl Into<i128> for Object { fn into(self) -> i128 { self.integer() as i128 } } 
+impl Into<isize> for Object { fn into(self) -> isize { self.integer() as isize } } 
+impl Into<u8> for Object { fn into(self) -> u8 { self.integer() as u8 } } 
+impl Into<u16> for Object { fn into(self) -> u16 { self.integer() as u16 } } 
+impl Into<u32> for Object { fn into(self) -> u32 { self.integer() as u32 } } 
+impl Into<u64> for Object { fn into(self) -> u64 { self.integer() as u64 } } 
+impl Into<u128> for Object { fn into(self) -> u128 { self.integer() as u128 } } 
+impl Into<usize> for Object { fn into(self) -> usize { self.integer() as usize } } 
+impl Into<f32> for Object { fn into(self) -> f32 { self.numerical() as f32 } } 
+impl Into<f64> for Object { fn into(self) -> f64 { self.numerical() } } 
+impl Into<char> for Object { fn into(self) -> char { self.string().chars().next().unwrap_or('\0') } } 
+impl Into<bool> for Object { fn into(self) -> bool { self.boolean() } } 
 
 // Recursive-descent JSON parser
 struct Parser<'a> {
@@ -936,6 +1014,29 @@ mod tests {
             ]
         }); 
         println!("{:?}", obj.into_json()); 
+    } 
+    #[test] 
+    fn get_key_test(){
+        let a = object!({ 
+            a: 1, 
+            b: true, 
+            c: "hello", 
+            d: [1, 2, 3], 
+            e: {x: 10, y: 20}, 
+            f: {
+                a: [String::from("1"), String::from("2")], 
+                b: ["1", "2"], 
+                c: [String::from("1"), "2"]
+            }, 
+            g: [ 
+                {a: String::from("1"), b: 2}, 
+                {a: 3, b: 4}, 
+                {a: String::from("1"), b: String::from("1")} 
+            ]
+        }).get("f").unwrap_or(&Object::None)
+        .get("a").unwrap_or(&Object::None)
+        .idx(0).unwrap_or(&Object::None)
+        .to_string();         assert_eq!(a, "\"1\""); 
     }
 }
 

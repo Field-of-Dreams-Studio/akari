@@ -8,7 +8,7 @@ use super::object;
 pub fn compile(tokens: Vec<Token>, mut data: HashMap<String, Obj>) -> Result<String, String> {
     let mut compiler = TemplateCompiler::new(tokens, data);
     compiler.compile()
-}
+} 
 
 // AccessType enum to distinguish between reading and writing operations
 #[derive(Debug, Clone, Copy, PartialEq)]
