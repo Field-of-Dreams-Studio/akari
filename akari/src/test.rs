@@ -45,7 +45,7 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(template_dir.join("base.html"), base_layout)?;
     
     // Create a page template that extends the base
-    let page_template = r#"-[ template "base.html" ]-
+    let page_template = r#"-[ template "/base.html" ]-
 
 -[ block head ]-
 <link rel="stylesheet" href="style.css">
@@ -76,7 +76,7 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
             <li class="item">-[ item ]-</li>
         -[ endfor ]-
     </ul>
-</div>
+</div> 
 -[ endblock ]-"#;
     
     fs::write(template_dir.join("home.html"), page_template)?;

@@ -4,6 +4,7 @@ use super::object::Object as Obj;
 pub enum Token { 
     // Directives and Block Structure
     TemplateKeyword,         // e.g., "template"
+    InsertKeyword,           // e.g., "insert" 
     BlockKeyword,            // e.g., "block"
     EndBlockKeyword,         // e.g., "endblock"
     ExportKeyword,           // e.g., "export"
@@ -344,7 +345,8 @@ impl Lexer {
         }
         // Map reserved words to their corresponding token variants.
         match word {
-            "template" => Token::TemplateKeyword,
+            "template" => Token::TemplateKeyword, 
+            "insert" => Token::InsertKeyword, 
             "block" => Token::BlockKeyword,
             "endblock" => Token::EndBlockKeyword,
             "export" => Token::ExportKeyword,
