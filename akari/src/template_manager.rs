@@ -141,7 +141,7 @@ impl TemplateManager {
     pub fn insert_template(&self, mut tokens: Vec<Token>, self_dir: &str, recursion_count: &mut u32) -> Vec<Token> { 
         let mut i = 0; 
         while i < tokens.len() { 
-            if matches!(tokens.get(i), Some(Token::TemplateKeyword)) && 
+            if matches!(tokens.get(i), Some(Token::InsertKeyword)) && 
                i + 1 < tokens.len() {
                 
                 if let Some(Token::Object(Obj::Str(name))) = tokens.get(i + 1) {
@@ -196,7 +196,7 @@ impl TemplateManager {
             let parent_name = get_full_dir(&parent_name, self_dir); 
 
             // Load the parent template
-            let parent_tokens = self.expand_template(self.load_tokens(&parent_name)?, self_dir, recursion_count); 
+            let parent_tokens = self.expand_template(self.load_tokens(&parent_name)?, &parent_name, recursion_count); 
             
             // Extract blocks from both parent and child
             let parent_blocks = self.extract_blocks(&parent_tokens)?;
@@ -379,6 +379,14 @@ pub fn get_full_dir(path: &str, ori: &str) -> String {
         let path = path.trim_start_matches("/").trim_start_matches("\\").to_string();
         return path 
     } else { 
+        // Remove everything after the last separator in the original path 
+        let ori = if let Some(pos) = ori.rfind('/') {
+            &ori[..pos]
+        } else if let Some(pos) = ori.rfind('\\') {
+            &ori[..pos]
+        } else {
+            ori
+        }; 
         // Handle relative path
         // First check if the original path ends with a separator
         if ori.ends_with("/") || ori.ends_with("\\") {

@@ -495,20 +495,7 @@ impl TemplateCompiler {
         
         let condition = self.evaluate_condition()?;
         
-        if condition {
-            // Process the if block
-            while self.pos < self.tokens.len() {
-                match &self.tokens[self.pos] {
-                    Token::EndIfKeyword => {
-                        self.pos += 1;
-                        break;
-                    },
-                    _ => {
-                        self.process_token()?;
-                    }
-                }
-            }
-        } else {
+        if !condition  {
             // Skip to endif
             let mut depth = 1;
             while self.pos < self.tokens.len() && depth > 0 {

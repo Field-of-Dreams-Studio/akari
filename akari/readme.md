@@ -57,6 +57,8 @@ https://github.com/Field-of-Dreams-Studio/starberry-example/tree/main
 
 # Update log 
 
+0.2.2: Debug insert and inheretance of templates 
+
 0.2.2-rc1: Enabled template caching, keyword "insert" now in used to insert another template into a template 
 
 0.2.1: Update documentations for Akari 

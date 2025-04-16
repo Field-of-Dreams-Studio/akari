@@ -77,6 +77,8 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
         -[ endfor ]-
     </ul>
 </div> 
+
+-[ insert "/base.html" ]- 
 -[ endblock ]-"#;
     
     fs::write(template_dir.join("home.html"), page_template)?;
