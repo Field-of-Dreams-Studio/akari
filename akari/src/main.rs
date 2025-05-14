@@ -4,7 +4,7 @@ use std::process::exit;
 use std::collections::HashMap;
 
 use akari::TemplateManager; 
-use akari::Object; 
+use akari::Value; 
 
 fn main() {
     // Collect command-line arguments.
@@ -22,12 +22,12 @@ fn main() {
             let content = &args[2]; 
 
             // Build the arguments HashMap from key=value pairs.
-            let mut context: HashMap<String, Object> = HashMap::new();
+            let mut context: HashMap<String, Value> = HashMap::new();
             for arg in args.iter().skip(3) {
                 if let Some(pos) = arg.find('=') {
                     let key = &arg[..pos];
                     let value = &arg[pos + 1..]; 
-                    let value = Object::from_json(&value.to_string()).unwrap_or_else(|_| {
+                    let value = Value::from_json(&value.to_string()).unwrap_or_else(|_| {
                         eprintln!("Failed to parse value: {}", key);
                         exit(1);
                     });  
@@ -49,12 +49,12 @@ fn main() {
             let file_path = &args[2]; 
 
             // Build the arguments HashMap from key=value pairs.
-            let mut context: HashMap<String, Object> = HashMap::new();
+            let mut context: HashMap<String, Value> = HashMap::new();
             for arg in args.iter().skip(3) {
                 if let Some(pos) = arg.find('=') {
                     let key = &arg[..pos];
                     let value = &arg[pos + 1..]; 
-                    let value = Object::from_json(&value.to_string()).unwrap_or_else(|_| {
+                    let value = Value::from_json(&value.to_string()).unwrap_or_else(|_| {
                         eprintln!("Failed to parse value: {}", key);
                         exit(1);
                     });  

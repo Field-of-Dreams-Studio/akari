@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::object;
 
-use super::{Object as Obj, TemplateManager};
+use super::{Value as Obj, TemplateManager};
 use std::fs;
 use std::path::Path;
 #[test] 
@@ -218,7 +218,7 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
 
 #[test] 
 fn test3() -> Result<(), Box<dyn std::error::Error>>{ 
-    use crate::Object; 
+    use crate::Value; 
     let page_template = r#"
 <link rel="stylesheet" href="style.css">
 <meta name="description" content="pageprop.desc">

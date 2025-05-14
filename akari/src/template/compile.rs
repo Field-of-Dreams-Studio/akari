@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use crate::object::Object as Obj; 
-use crate::parse::Token; 
-
-use super::parse;
-use super::object;
+use crate::Value as Obj; 
+use super::parse::Token; 
 
 pub fn compile(tokens: Vec<Token>, mut data: HashMap<String, Obj>) -> Result<String, String> {
     let mut compiler = TemplateCompiler::new(tokens, data);

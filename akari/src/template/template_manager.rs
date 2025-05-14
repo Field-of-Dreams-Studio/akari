@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::object::Object as Obj;
-use crate::parse::{tokenize, Token};
-use crate::compile::compile;
+use crate::Value as Obj;
+use crate::{tokenize, Token};
+use super::compile::compile;
 
 /// Manages template loading, caching, and rendering
 pub struct TemplateManager {

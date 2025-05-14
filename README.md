@@ -30,12 +30,12 @@ Where you can also use
 
 ```rust 
 use akari::object; 
-use akari::Object; // Notice the capital O meaning that Object is a struct not macro 
+use akari::Value; 
 
 let json = r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#; 
-let obj = Object::from_json(json).expect("Failed to parse JSON"); 
+let obj = Value::from_json(json).expect("Failed to parse JSON"); 
 let dir = "D://test/test.json"; 
-Object::from_jsonf(dir).unwrap_or(Object::None); // Read a json from a file 
+Value::from_jsonf(dir).unwrap_or(Object::None); // Read a json from a file 
 obj.into_jsonf(dir); // Write obj into the dir 
 ``` 
 
@@ -55,7 +55,15 @@ Read more in starberry example to find out how to write Akari template
 
 https://github.com/Field-of-Dreams-Studio/starberry-example/tree/main 
 
+# Contributing 
+
+You are free to contribute! 
+
+Read more in STYLE.md 
+
 # Update log 
+
+0.2.3-rc1: Rename Akari's method & Seperate Object mods and Template mod. Change the name of Object into Value 
 
 0.2.2: Debug insert and inheretance of templates 
 

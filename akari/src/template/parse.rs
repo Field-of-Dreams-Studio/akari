@@ -1,4 +1,4 @@
-use super::object::Object as Obj; 
+use super::Value as Obj; 
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token { 
@@ -375,8 +375,8 @@ impl Lexer {
 /// # Example
 ///
 /// ```rust
-/// use akari::parse::{tokenize, Token}; 
-/// use akari::object::Object; 
+/// use akarica::{tokenize, Token}; 
+/// use akari::Value; 
 /// let input = r#"
 /// -[ template "template.html" ]-
 /// -[ block header ]-
