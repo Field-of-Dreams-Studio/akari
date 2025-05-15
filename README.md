@@ -63,6 +63,8 @@ Read more in STYLE.md
 
 # Update log 
 
+0.2.3: Debug ,change Value::Dictionary into Value::Dict, Updated Macro 
+
 0.2.3-rc1: Rename Akari's method & Seperate Object mods and Template mod. Change the name of Object into Value 
 
 0.2.2: Debug insert and inheretance of templates 

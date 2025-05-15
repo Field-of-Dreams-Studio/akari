@@ -282,7 +282,7 @@ impl TemplateCompiler {
                         }
                     }
                 },
-                Obj::Dictionary(dict) => {
+                Obj::Dict(dict) => {
                     // Allow both string literals and string expressions as keys
                     let key = index.interal_value_as_string();
                     if let Some(val) = dict.get(&key) {
@@ -334,7 +334,7 @@ impl TemplateCompiler {
                             }
                         }
                     },
-                    Obj::Dictionary(dict) => {
+                    Obj::Dict(dict) => {
                         match prop_name.as_str() {
                             "len" => value = Obj::Numerical(dict.len() as f64),
                             // Add more dictionary methods here as needed
@@ -465,7 +465,7 @@ impl TemplateCompiler {
                             self.output.push_str("<!-- List index must be a number -->");
                         }
                     },
-                    Obj::Dictionary(dict) => {
+                    Obj::Dict(dict) => {
                         let key = index.interal_value_as_string();
                         dict.remove(&key);
                     },
@@ -562,7 +562,7 @@ impl TemplateCompiler {
                         }
                     }
                 },
-                Obj::Dictionary(map) => {
+                Obj::Dict(map) => {
                     // Convert dictionary entries to a Vec to avoid borrowing conflicts
                     let entries: Vec<_> = map.into_iter()
                         .map(|(k, v)| (k.clone(), v.clone()))
@@ -573,7 +573,7 @@ impl TemplateCompiler {
                         let mut entry = HashMap::new();
                         entry.insert("key".to_string(), Obj::Str(k));
                         entry.insert("value".to_string(), v);
-                        self.data.insert(loop_var.clone(), Obj::Dictionary(entry));
+                        self.data.insert(loop_var.clone(), Obj::Dict(entry));
                         
                         // Execute the loop body
                         let mut body_compiler = TemplateCompiler::new(
@@ -746,7 +746,7 @@ impl TemplateCompiler {
                     Obj::Numerical(n) => Ok(n != 0.0),
                     Obj::Str(s) => Ok(!s.is_empty()),
                     Obj::List(l) => Ok(!l.is_empty()),
-                    Obj::Dictionary(d) => Ok(!d.is_empty()),
+                    Obj::Dict(d) => Ok(!d.is_empty()),
                     Obj::None => Ok(false),
                 }
             },
@@ -860,7 +860,7 @@ impl TemplateCompiler {
                         _ => Err(format!("No property/method '{}' on list", prop_name)),
                     }
                 },
-                Obj::Dictionary(dict) => {
+                Obj::Dict(dict) => {
                     match prop_name.as_str() {
                         "len" => Ok(Obj::Numerical(dict.len() as f64)),
                         // Try to get the property by name
@@ -912,7 +912,7 @@ impl TemplateCompiler {
                     _ => Err("List index must be a number".to_string())
                 }
             },
-            Obj::Dictionary(dict) => {
+            Obj::Dict(dict) => {
                 // Allow both string literals and string expressions as keys
                 let key = index.interal_value_as_string();
                 if let Some(val) = dict.get(&key) {
@@ -1108,7 +1108,7 @@ impl TemplateCompiler {
             Obj::Numerical(n) => *n != 0.0,
             Obj::Str(s) => !s.is_empty(),
             Obj::List(l) => !l.is_empty(),
-            Obj::Dictionary(d) => !d.is_empty(),
+            Obj::Dict(d) => !d.is_empty(),
             Obj::None => false,
         }
     }

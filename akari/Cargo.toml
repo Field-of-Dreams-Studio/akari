@@ -10,4 +10,4 @@ categories = ["network-programming", "web-programming::http-server" ]
 keywords = ["template-rendering", "frontend"]  
 
 [dependencies] 
-akari_macro = { version="0.1.0", path="../am" } 
+akari_macro = { version="0.2.0", path="../am" } 

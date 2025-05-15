@@ -12,7 +12,7 @@ mod tests {
         expected_map.insert("a".to_string(), Value::Numerical(1.0));
         expected_map.insert("b".to_string(), Value::Boolean(true));
         expected_map.insert("c".to_string(), Value::Str("hello".to_string()));
-        assert_eq!(obj, Value::Dictionary(expected_map));
+        assert_eq!(obj, Value::Dict(expected_map));
     }
     
     #[test]
@@ -40,7 +40,7 @@ mod tests {
         expected_map.insert("a".to_string(), Value::Numerical(1.0));
         expected_map.insert("b".to_string(), Value::Boolean(true));
         expected_map.insert("c".to_string(), Value::Str("hello".to_string()));
-        assert_eq!(obj, Value::Dictionary(expected_map));
+        assert_eq!(obj, Value::Dict(expected_map));
     } 
 
     #[test] 
@@ -56,7 +56,7 @@ mod tests {
             Value::Numerical(2.0),
             Value::Numerical(3.0)
         ]));
-        expected_map.insert("c".to_string(), Value::Dictionary({
+        expected_map.insert("c".to_string(), Value::Dict({
             let mut inner_map = HashMap::new();
             inner_map.insert("hello".to_string(), Value::Str("world".to_string()));
             inner_map
@@ -90,7 +90,7 @@ mod tests {
         println!("{:?}", obj_obj.format()); 
         assert_eq!(
             obj_obj, 
-            Value::Dictionary(HashMap::from([
+            Value::Dict(HashMap::from([
                 ("c".to_string(), Value::Str("p".to_string())),
                 ("b".to_string(), Value::List(vec![
                     Value::Str("aaa".to_string()), 
@@ -112,7 +112,7 @@ mod tests {
             let mut map = HashMap::new();
             map.insert("string".to_string(), Value::Str("hello".to_string()));
             map.insert("number".to_string(), Value::Numerical(42.0));
-            Value::Dictionary(map)
+            Value::Dict(map)
         };
         
         assert_eq!(obj_obj, expected);
@@ -144,13 +144,13 @@ mod tests {
             Value::Numerical(2.0),
             Value::Numerical(3.0)
         ]));
-        properties.insert("complex".to_string(), Value::Dictionary(inner_complex));
+        properties.insert("complex".to_string(), Value::Dict(inner_complex));
         
         let mut root = HashMap::new();
         root.insert("name".to_string(), Value::Str("nested_test".to_string()));
-        root.insert("properties".to_string(), Value::Dictionary(properties));
+        root.insert("properties".to_string(), Value::Dict(properties));
         
-        let expected = Value::Dictionary(root);
+        let expected = Value::Dict(root);
         
         assert_eq!(nested_obj, expected);
     }  
@@ -176,6 +176,7 @@ mod tests {
         }); 
         println!("{:?}", obj.into_json()); 
     } 
+
     #[test] 
     fn get_key_test(){
         let a = object!({ 
@@ -194,7 +195,7 @@ mod tests {
                 {a: 3, b: 4}, 
                 {a: String::from("1"), b: String::from("1")} 
             ]
-        }).get("f").get("a").idx(0).unwrap_or(&Value::None)
+        }).get("f").get("a").idx(0)
         .to_string(); 
         assert_eq!(a, "\"1\""); 
     }

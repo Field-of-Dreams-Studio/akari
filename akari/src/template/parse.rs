@@ -375,7 +375,7 @@ impl Lexer {
 /// # Example
 ///
 /// ```rust
-/// use akarica::{tokenize, Token}; 
+/// use akari::{tokenize, Token}; 
 /// use akari::Value; 
 /// let input = r#"
 /// -[ template "template.html" ]-

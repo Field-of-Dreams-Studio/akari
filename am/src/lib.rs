@@ -114,7 +114,7 @@ fn generate_code(expr: &ValueExpr) -> TokenStream2 {
             quote! {{
                 let mut map = ::std::collections::HashMap::new();
                 #(#entries)*
-                Value::Dictionary(map)
+                Value::Dict(map)
             }}
         },
         ValueExpr::List(list) => {

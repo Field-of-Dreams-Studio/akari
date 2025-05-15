@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
         self.skip_whitespace();
         if let Some('}') = self.peek() {
             self.next();
-            return Ok(Value::Dictionary(map));
+            return Ok(Value::Dict(map));
         }
         loop {
             self.skip_whitespace();
@@ -78,7 +78,7 @@ impl<'a> Parser<'a> {
                 _ => return Err(format!("Expected ',' or '}}' at position {}", self.pos)),
             }
         }
-        Ok(Value::Dictionary(map))
+        Ok(Value::Dict(map))
     }
     
     fn parse_array(&mut self) -> Result<Value, String> {

@@ -9,7 +9,7 @@ pub enum Value {
     Boolean(bool), 
     Str(String),
     List(Vec<Value>),
-    Dictionary(HashMap<String, Value>),  
+    Dict(HashMap<String, Value>),  
     None, 
 } 
 
@@ -29,7 +29,7 @@ impl Value {
     /// let obj = Value::new(vec![1, 2, 3]);
     /// assert_eq!(obj, Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])); 
     /// let obj = Value::new(HashMap::from([("key", "value")])); 
-    /// assert_eq!(obj, Value::Dictionary(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
+    /// assert_eq!(obj, Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
     /// ``` 
     /// 
     /// # Old grammar 
@@ -39,7 +39,7 @@ impl Value {
     /// let obj = Value::new(vec![Value::new(1), Value::new(2), Value::new(3)]);
     /// assert_eq!(obj, Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])); 
     /// let obj = Value::new(HashMap::from([("key".to_string(), Value::Str("value".to_string()))])); 
-    /// assert_eq!(obj, Value::Dictionary(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
+    /// assert_eq!(obj, Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
     /// ``` 
     pub fn new<T: Into<Value>>(value: T) -> Self {
         value.into()
@@ -51,7 +51,7 @@ impl Value {
             Value::Boolean(_) => "bool".to_string(),
             Value::Str(_) => "str".to_string(),
             Value::List(_) => "vec".to_string(),
-            Value::Dictionary(_) => "dict".to_string(),
+            Value::Dict(_) => "dict".to_string(),
             Value::None => "none".to_string(), 
         }
     } 
@@ -101,10 +101,10 @@ impl Value {
     /// ```rust 
     /// use akari::Value; 
     /// use std::collections::HashMap; 
-    /// assert_eq!(Value::new_dict(), Value::Dictionary(HashMap::new())) 
+    /// assert_eq!(Value::new_dict(), Value::Dict(HashMap::new())) 
     /// ``` 
     pub fn new_dict() -> Self { 
-        return Self::Dictionary(HashMap::new()) 
+        return Self::Dict(HashMap::new()) 
     } 
 
     /// Converts the Value into a numerical value. 
@@ -117,7 +117,7 @@ impl Value {
             Value::Boolean(b) => if *b { 1.0 } else { 0.0 },
             Value::Str(s) => s.parse::<f64>().unwrap_or(0.0),
             Value::List(l) => l.len() as f64,
-            Value::Dictionary(d) => d.len() as f64,
+            Value::Dict(d) => d.len() as f64,
             Value::None => 0.0, 
         }
     } 
@@ -130,7 +130,7 @@ impl Value {
             Value::Boolean(b) => if *b { 1 } else { 0 },
             Value::Str(s) => s.parse::<i64>().unwrap_or(0),
             Value::List(l) => l.len() as i64,
-            Value::Dictionary(d) => d.len() as i64,
+            Value::Dict(d) => d.len() as i64,
             Value::None => 0, 
         }
     } 
@@ -142,7 +142,7 @@ impl Value {
             Value::Boolean(b) => *b,
             Value::Str(s) => !s.is_empty(),
             Value::List(l) => !l.is_empty(),
-            Value::Dictionary(d) => !d.is_empty(),
+            Value::Dict(d) => !d.is_empty(),
             Value::None => false, 
         }
     } 
@@ -162,7 +162,7 @@ impl Value {
     pub fn list(&self) -> Vec<Value> {
         match self {
             Value::List(l) => l.clone(),
-            Value::Dictionary(d) => d.values().cloned().collect(),
+            Value::Dict(d) => d.values().cloned().collect(),
             _ => vec![self.clone()],
         }
     } 
@@ -173,7 +173,7 @@ impl Value {
     /// ```rust 
     /// use akari::Value; 
     /// use std::collections::HashMap; 
-    /// let obj = Value::Dictionary(HashMap::from([ 
+    /// let obj = Value::Dict(HashMap::from([ 
     ///    ("key".to_string(), Value::Str("value".to_string())), 
     ///    ("number".to_string(), Value::Numerical(42.0)), 
     ///    ("list".to_string(), Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])), 
@@ -195,7 +195,7 @@ impl Value {
                 if result.len() >= 2 { result.truncate(result.len() - 2); }
                 format!("[{}]", result)
             }
-            Value::Dictionary(d) => {
+            Value::Dict(d) => {
                 let mut result = String::new();
                 for (key, value) in d {
                     result.push_str(&format!("\"{}\": {}, ", key, value.into_json()));
@@ -234,7 +234,7 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let json = r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#; 
     /// let obj = Value::from_json(json).expect("Failed to parse JSON"); 
-    /// assert_eq!(obj, Value::Dictionary(HashMap::from([
+    /// assert_eq!(obj, Value::Dict(HashMap::from([
     ///     ("key".to_string(), Value::Str("value".to_string())),
     ///     ("number".to_string(), Value::Numerical(42.0)),
     ///     ("list".to_string(), Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])), 
@@ -286,7 +286,7 @@ impl Value {
     // /// use std::collections::HashMap; 
     // /// let mut map = HashMap::new(); 
     // /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    // /// let obj = Value::Dictionary(map); 
+    // /// let obj = Value::Dict(map); 
     // /// let value = obj.get_path("key"); 
     // /// assert_eq!(value, Some(&Value::Str("value".to_string()))); 
     // /// ``` 
@@ -347,7 +347,7 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let obj = Value::Dictionary(map); 
+    /// let obj = Value::Dict(map); 
     /// let value = obj.get("key"); 
     /// assert_eq!(value, &Value::Str("value".to_string())); 
     /// ``` 
@@ -362,7 +362,7 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let obj = Value::Dictionary(map); 
+    /// let obj = Value::Dict(map); 
     /// let default = Value::Str("default".to_string()); 
     /// let value = obj.get_or("no_way", &default); 
     /// assert_eq!(value, &default); 
@@ -379,12 +379,12 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let obj = Value::Dictionary(map); 
+    /// let obj = Value::Dict(map); 
     /// let value = obj.try_get("key"); 
     /// assert_eq!(value, Ok(&Value::Str("value".to_string()))); 
     /// ``` 
     pub fn try_get<T: AsRef<str>>(&self, key: T) -> Result<&Value, ValueError> {
-        if let Value::Dictionary(map) = self {
+        if let Value::Dict(map) = self {
             match map.get(key.as_ref()) { 
                 Some(value) => Ok(value), 
                 None => Err(ValueError::KeyNotFoundError)
@@ -405,7 +405,7 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let obj = Value::Dictionary(map); 
+    /// let obj = Value::Dict(map); 
     /// let value = obj.get_unchecked("key"); 
     /// assert_eq!(value, &Value::Str("value".to_string())); 
     /// ``` 
@@ -421,7 +421,7 @@ impl Value {
     /// use akari::Value; 
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
-    /// let mut obj = Value::Dictionary(map); 
+    /// let mut obj = Value::Dict(map); 
     /// obj.set("key".to_string(), Value::Str("new_value".to_string())); 
     /// let value = obj.get("key"); 
     /// assert_eq!(value, &Value::Str("new_value".to_string())); 
@@ -432,13 +432,13 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let mut obj = Value::Dictionary(map); 
+    /// let mut obj = Value::Dict(map); 
     /// obj.set("key".to_string(), Value::Str("new_value".to_string())); 
     /// let value = obj.get("key"); 
     /// assert_eq!(value, &Value::Str("new_value".to_string())); 
     /// ``` 
     pub fn set<T: Into<String>, O: Into<Value>>(&mut self, key: T, value: O) {
-        if let Value::Dictionary(map) = self {
+        if let Value::Dict(map) = self {
             map.insert(key.into(), value.into());
         }
     } 
@@ -450,13 +450,13 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
-    /// let mut obj = Value::Dictionary(map); 
+    /// let mut obj = Value::Dict(map); 
     /// let value = obj.delete("key"); 
     /// assert_eq!(value, Some(Value::Str("value".to_string()))); 
     /// ``` 
     /// This function will return None if the key does not exist. 
     pub fn delete(&mut self, key: &str) -> Option<Value> {
-        if let Value::Dictionary(map) = self {
+        if let Value::Dict(map) = self {
             map.remove(key)
         } else {
             None
@@ -470,13 +470,67 @@ impl Value {
     /// use std::collections::HashMap; 
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.idx(1); 
-    /// assert_eq!(value, Some(&Value::Str("value2".to_string()))); 
+    /// assert_eq!(value, &Value::Str("value2".to_string())); 
     /// ``` 
-    pub fn idx(&self, index: usize) -> Option<&Value> {
+    pub fn idx(&self, index: usize) -> &Value {
+        self.try_idx(index).unwrap_or(&Value::None) 
+    } 
+
+    /// Retrieves a value from the list by index. 
+    /// This function will return a default value if the index is out of bounds. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
+    /// let default = Value::Str("default".to_string()); 
+    /// let value = list.idx_or(1, &default); 
+    /// assert_eq!(value, &Value::Str("value2".to_string())); 
+    /// ``` 
+    pub fn idx_or<'a>(&'a self, index: usize, default: &'a Value) -> &'a Value {
+        self.try_idx(index).unwrap_or(default)
+    } 
+
+    /// Retrieves a value from the list by index. 
+    /// This function will return an error if the index is out of bounds.   
+    /// # Example 
+    ///  ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// use akari::ValueError; 
+    /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
+    /// let value = list.try_idx(1); 
+    /// assert_eq!(value, Ok(&Value::Str("value2".to_string()))); 
+    /// let value = list.try_idx(5); 
+    /// assert_eq!(value, Err(ValueError::IndexOutOfBoundError));  
+    /// ``` 
+    pub fn try_idx(&self, index: usize) -> Result<&Value, ValueError> {
         if let Value::List(vec) = self {
-            vec.get(index)
+            if index < vec.len() {
+                Ok(&vec[index])
+            } else {
+                Err(ValueError::IndexOutOfBoundError)
+            }
         } else {
-            None
+            Err(ValueError::TypeError)
+        }
+    } 
+
+    /// Retrieves a value from the list by index. 
+    /// This function will panic if the index is out of bounds. 
+    /// # Example  
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
+    /// let value = list.idx_unchecked(1); 
+    /// assert_eq!(value, &Value::Str("value2".to_string())); 
+    /// ``` 
+    pub fn idx_unchecked(&self, index: usize) -> &Value {
+        if let Value::List(vec) = self {
+            &vec[index]
+        } else {
+            panic!("Value is not a list")
         }
     } 
 
@@ -488,7 +542,7 @@ impl Value {
     /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// list.insert(1, Value::Str("new_value".to_string())); 
     /// let value = list.idx(1); 
-    /// assert_eq!(value, Some(&Value::Str("new_value".to_string()))); 
+    /// assert_eq!(value, &Value::Str("new_value".to_string())); 
     /// ``` 
     /// This function will push the value to the end of the list if the index is out of bounds. 
     pub fn insert(&mut self, index: usize, value: Value) {
@@ -509,7 +563,7 @@ impl Value {
     /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// list.push(Value::Str("new_value".to_string())); 
     /// let value = list.idx(2); 
-    /// assert_eq!(value, Some(&Value::Str("new_value".to_string()))); 
+    /// assert_eq!(value, &Value::Str("new_value".to_string())); 
     /// ``` 
     /// This function will push the value to the end of the list. 
     pub fn push(&mut self, value: Value) {
@@ -564,7 +618,7 @@ impl Value {
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let length = list.len(); 
     /// assert_eq!(length, 2); 
-    /// let dict = Value::Dictionary(HashMap::from([ 
+    /// let dict = Value::Dict(HashMap::from([ 
     ///    ("key".to_string(), Value::Str("value".to_string())), 
     /// ])); 
     /// let length = dict.len(); 
@@ -574,7 +628,7 @@ impl Value {
     pub fn len(&self) -> usize {
         match self {
             Value::List(vec) => vec.len(),
-            Value::Dictionary(map) => map.len(),
+            Value::Dict(map) => map.len(),
             _ => 1,
         }
     } 
@@ -604,7 +658,7 @@ impl Value {
                 }
                 format!("[{}]", result)
             }
-            Value::Dictionary(d) => {
+            Value::Dict(d) => {
                 let mut result = String::new();
                 for (key, value) in d {
                     result.push_str(&format!("{} {} = {}, ", value.type_of(), key, value));
@@ -651,7 +705,7 @@ impl Hash for Value {
                     item.hash(state);
                 }
             },
-            Value::Dictionary(dict) => {
+            Value::Dict(dict) => {
                 4.hash(state);
                 // For dictionaries, hash the number of entries
                 // We can't reliably hash the entries themselves as HashMap doesn't implement Hash
@@ -695,7 +749,7 @@ impl From<String> for Value { fn from(s: String) -> Self { Value::Str(s) } }
 impl From<&String> for Value { fn from(s: &String) -> Self { Value::Str(s.clone()) } } 
 
 // impl From<Vec<Value>> for Value { fn from(vec: Vec<Value>) -> Self { Value::List(vec) } }
-// impl From<HashMap<String, Value>> for Value { fn from(map: HashMap<String, Value>) -> Self { Value::Dictionary(map) } }
+// impl From<HashMap<String, Value>> for Value { fn from(map: HashMap<String, Value>) -> Self { Value::Dict(map) } }
 
 // Implement From trait for Vec<T>
 impl<T> From<Vec<T>> for Value 
@@ -714,7 +768,7 @@ where
     T: Into<Value>, 
 {
     fn from(map: HashMap<S, T>) -> Self {
-        Value::Dictionary(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+        Value::Dict(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
     }
 } 
 
