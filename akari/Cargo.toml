@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["Redstone <redstone@fds.moe>"] 
 description = "Template rendering language" 
 repository = "https://github.com/Field-of-Dreams-Studio/akari" 
+homepage = "https://fds.rs/akari/" 
 license = "GPL-3.0-or-later" 
 categories = ["network-programming", "web-programming::http-server" ] 
 keywords = ["template-rendering", "frontend"]  
