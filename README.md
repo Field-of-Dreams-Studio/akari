@@ -63,7 +63,9 @@ Read more in STYLE.md
 
 # Update log 
 
-0.2.3: Debug ,change Value::Dictionary into Value::Dict, Updated Macro 
+0.2.4: `is_<type>` functions such as `is_dict()` and so on implemented. New `contains()` function implemented 
+
+0.2.3: Debug, change Value::Dictionary into Value::Dict, Updated Macro 
 
 0.2.3-rc1: Rename Akari's method & Seperate Object mods and Template mod. Change the name of Object into Value 
 

@@ -122,7 +122,128 @@ impl Value {
         }
     } 
 
-    /// Converts the Value into an integer value. 
+    /// Checks if the Value is a numerical value. 
+    /// This function will return true if the Value is a numerical value, 
+    /// false otherwise. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Value; 
+    /// let obj = Value::Numerical(42.0); 
+    /// assert!(obj.is_numerical());
+    /// let obj = Value::Str("hello".to_string());
+    /// assert!(!obj.is_numerical());
+    /// let obj = Value::Boolean(true);
+    /// assert!(!obj.is_numerical());
+    /// ``` 
+    pub fn is_numerical(&self) -> bool {
+        match self {
+            Value::Numerical(_) => true,
+            _ => false, 
+        }
+    } 
+
+    /// Checks if the Value is a boolean value. 
+    /// This function will return true if the Value is a boolean value, 
+    /// false otherwise. 
+    /// # Example
+    /// ```rust 
+    /// use akari::Value; 
+    /// let obj = Value::Boolean(true);
+    /// assert!(obj.is_boolean());
+    /// let obj = Value::Str("hello".to_string());
+    /// assert!(!obj.is_boolean());
+    /// let obj = Value::Numerical(42.0);
+    /// assert!(!obj.is_boolean()); 
+    /// ```
+    pub fn is_boolean(&self) -> bool {
+        match self {
+            Value::Boolean(_) => true,
+            _ => false, 
+        }
+    } 
+
+    /// Checks if the Value is a string value. 
+    /// This function will return true if the Value is a string value, 
+    /// false otherwise. 
+    /// # Example 
+    /// ```rust
+    /// use akari::Value;
+    /// let obj = Value::Str("hello".to_string());
+    /// assert!(obj.is_str());
+    /// let obj = Value::Numerical(42.0);
+    /// assert!(!obj.is_str());
+    /// let obj = Value::Boolean(true);
+    /// assert!(!obj.is_str());
+    /// ```
+    pub fn is_str(&self) -> bool {
+        match self {
+            Value::Str(_) => true,
+            _ => false, 
+        }
+    } 
+
+    /// Checks if the Value is a list value. 
+    /// This function will return true if the Value is a list value, 
+    /// false otherwise. 
+    /// # Example 
+    /// ```rust
+    /// use akari::Value;
+    /// let obj = Value::List(vec![Value::Str("hello".to_string()), Value::Numerical(42.0)]);
+    /// assert!(obj.is_list());
+    /// let obj = Value::Numerical(42.0);
+    /// assert!(!obj.is_list());
+    /// let obj = Value::Boolean(true);
+    /// assert!(!obj.is_list());
+    /// ``` 
+    pub fn is_list(&self) -> bool {
+        match self {
+            Value::List(_) => true,
+            _ => false, 
+        }
+    } 
+
+    /// Checks if the Value is a dictionary value. 
+    /// This function will return true if the Value is a dictionary value, 
+    /// false otherwise. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let obj = Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))])); 
+    /// assert!(obj.is_dict()); 
+    /// let obj = Value::Numerical(42.0); 
+    /// assert!(!obj.is_dict()); 
+    /// let obj = Value::Boolean(true); 
+    /// assert!(!obj.is_dict()); 
+    /// ``` 
+    pub fn is_dict(&self) -> bool {
+        match self {
+            Value::Dict(_) => true,
+            _ => false, 
+        }
+    } 
+
+    /// Checks if the Value is None. 
+    /// This function will return true if the Value is None, 
+    /// false otherwise. 
+    /// # Example 
+    /// ```rust
+    /// use akari::Value;
+    /// let obj = Value::None;
+    /// assert!(obj.is_none());
+    /// let obj = Value::Numerical(42.0);
+    /// assert!(!obj.is_none());
+    /// let obj = Value::Boolean(true);
+    /// assert!(!obj.is_none());
+    /// ```
+    pub fn is_none(&self) -> bool {
+        match self {
+            Value::None => true,
+            _ => false, 
+        }
+    } 
+
+    /// Converts the Value into an integ·er value. 
     /// The rule is the same as numerical, but it will return an i64 value. 
     pub fn integer(&self) -> i64 {
         match self {
@@ -376,6 +497,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
+    ///  
     /// use std::collections::HashMap; 
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
@@ -532,6 +654,73 @@ impl Value {
         } else {
             panic!("Value is not a list")
         }
+    } 
+
+    /// Checks if the Value contains a specific value. 
+    /// This function will return true if the Value contains the value, 
+    /// false otherwise. 
+    /// By meaning of "contains", it means that the value is equal to the Value for the following types: 
+    /// - Numerical: The numerical value is equal to the value. 
+    /// - Boolean: The boolean value is equal to the value. 
+    /// - String: The string value is equal to the value. 
+    /// For List and Dict, it will check if the value is contained in the list or dict. 
+    /// For None it will always return false. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
+    /// assert!(list.contains(&Value::Str("value1".to_string()))); 
+    /// assert!(!list.contains(&Value::Str("value3".to_string()))); 
+    /// ``` 
+    /// 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let mut map = HashMap::new(); 
+    /// map.insert("key".to_string(), Value::Str("value".to_string())); 
+    /// let obj = Value::Dict(map); 
+    /// assert!(obj.contains(&Value::Str("value".to_string()))); 
+    /// assert!(!obj.contains(&Value::Str("other_value".to_string()))); 
+    /// ```
+    /// 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let obj = Value::Numerical(42.0); 
+    /// assert!(obj.contains(&Value::Numerical(42.0))); 
+    /// assert!(!obj.contains(&Value::Numerical(43.0))); 
+    /// ``` 
+    ///  
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let obj = Value::Boolean(true); 
+    /// assert!(obj.contains(&Value::Boolean(true))); 
+    /// assert!(!obj.contains(&Value::Boolean(false))); 
+    /// ``` 
+    ///  
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let obj = Value::Str("value".to_string()); 
+    /// assert!(obj.contains(&Value::Str("value".to_string()))); 
+    /// assert!(!obj.contains(&Value::Str("other_value".to_string()))); 
+    /// ``` 
+    pub fn contains<'a, T>(&self, value: &'a T) -> bool 
+        where &'a Value: From<&'a T> + Sized { 
+        match self {
+            Value::Dict(map) => map.values().any(|v| { 
+                let value: &Value = value.into(); 
+                v == value 
+            }),
+            Value::List(vec) => vec.contains(value.into()),
+            Value::None => false, 
+            _ => { 
+                let value: &Value = value.into(); 
+                self == value 
+            } 
+        } 
     } 
 
     /// Sets a value in the list by index. 
