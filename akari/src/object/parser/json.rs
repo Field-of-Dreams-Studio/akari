@@ -1525,4 +1525,319 @@ mod tests {
             panic!("Expected object");
         }
     }
+
+    // ===== Malformed input tests =====
+
+    #[test]
+    fn test_malformed_empty_input() {
+        assert!(BsonParser::parse_one(b"").is_err());
+        assert!(BsonParser::parse_one(b"   ").is_err());
+    }
+
+    #[test]
+    fn test_malformed_random_bytes() {
+        assert!(BsonParser::parse_one(b"@#$%^&").is_err());
+        assert!(BsonParser::parse_one(b"\xff\xfe").is_err());
+    }
+
+    #[test]
+    fn test_malformed_unterminated_string() {
+        assert!(BsonParser::parse_one(br#""hello"#).is_err());
+        assert!(BsonParser::parse_one(br#""hello\"#).is_err());
+    }
+
+    #[test]
+    fn test_malformed_unterminated_object() {
+        assert!(BsonParser::parse_one(br#"{"a": 1"#).is_err());
+        assert!(BsonParser::parse_one(br#"{"a":"#).is_err());
+        assert!(BsonParser::parse_one(br#"{"#).is_err());
+    }
+
+    #[test]
+    fn test_malformed_unterminated_array() {
+        assert!(BsonParser::parse_one(br#"[1, 2"#).is_err());
+        assert!(BsonParser::parse_one(br#"["#).is_err());
+    }
+
+    #[test]
+    fn test_malformed_mismatched_brackets() {
+        assert!(BsonParser::parse_one(br#"[1, 2}"#).is_err());
+        assert!(BsonParser::parse_one(br#"{"a": 1]"#).is_err());
+    }
+
+    #[test]
+    fn test_malformed_colon_without_value() {
+        let mut parser = StackParser::new();
+        parser.feed(br#"{"a":}"#).unwrap();
+        parser.end_of_input();
+        assert!(parser.parse_next().is_err());
+    }
+
+    #[test]
+    fn test_malformed_truncated_keywords() {
+        assert!(BsonParser::parse_one(b"tru").is_err());
+        assert!(BsonParser::parse_one(b"fals").is_err());
+        assert!(BsonParser::parse_one(b"nul").is_err());
+    }
+
+    #[test]
+    fn test_malformed_invalid_number_leading_zero() {
+        // This parser is lenient about leading zeros — it parses them as valid numbers
+        let result = BsonParser::parse_one(b"00");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Value::Numerical(0.0));
+    }
+
+    #[test]
+    fn test_malformed_lone_minus() {
+        assert!(BsonParser::parse_one(b"-").is_err());
+    }
+
+    #[test]
+    fn test_malformed_number_trailing_dot() {
+        // This parser is lenient about trailing dots — "1." parses as 1.0
+        let result = BsonParser::parse_one(b"1.");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Value::Numerical(1.0));
+    }
+
+    #[test]
+    fn test_malformed_number_leading_dot() {
+        assert!(BsonParser::parse_one(b".5").is_err());
+    }
+
+    #[test]
+    fn test_malformed_invalid_unicode_escape() {
+        // Incomplete unicode escape
+        assert!(BsonParser::parse_one(br#""\u00""#).is_err());
+        // Non-hex in unicode escape
+        assert!(BsonParser::parse_one(br#""\uGGGG""#).is_err());
+    }
+
+    #[test]
+    fn test_malformed_stack_empty_input() {
+        let mut parser = StackParser::new();
+        parser.feed(b"").unwrap();
+        parser.end_of_input();
+        let result = parser.parse_next();
+        // Should be Eof or error, not a value
+        assert!(result.is_err() || matches!(result, Ok(Next::Eof)));
+    }
+
+    #[test]
+    fn test_malformed_stack_unterminated_string() {
+        let mut parser = StackParser::new();
+        parser.feed(br#"{"key": "unterminated"#).unwrap();
+        parser.end_of_input();
+        assert!(parser.parse_next().is_err());
+    }
+
+    #[test]
+    fn test_malformed_stack_mismatched_close() {
+        let mut parser = StackParser::new();
+        parser.feed(br#"[1, 2}"#).unwrap();
+        parser.end_of_input();
+        assert!(parser.parse_next().is_err());
+    }
+
+    // ===== ParseErrorKind variant coverage =====
+
+    #[test]
+    fn test_error_kind_trailing_data() {
+        // parse_one / parse_full should reject trailing non-whitespace
+        let result = BsonParser::parse_one(br#"42 "extra""#);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::TrailingData);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_trailing_data_json() {
+        let result = JsonParser::parse_one(r#"true false"#);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::TrailingData);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_trailing_data_stack() {
+        let mut parser = StackParser::new();
+        parser.feed(br#"42 "extra""#).unwrap();
+        parser.end_of_input();
+        let result = parser.parse_full();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::TrailingData);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_incomplete() {
+        let mut parser = StackParser::new();
+        parser.feed(br#"[1, 2"#).unwrap();
+        parser.end_of_input();
+        let result = parser.parse_next();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::Incomplete);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_incomplete_bson() {
+        let input = b"{\"key\":";
+        let result = BsonParser::parse_one(input);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::Incomplete);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_invalid_number() {
+        let result = BsonParser::parse_one(b"1.2.3");
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(
+                e.kind == ParseErrorKind::InvalidNumber || e.kind == ParseErrorKind::TrailingData,
+                "Expected InvalidNumber or TrailingData, got {:?}", e.kind
+            );
+        }
+    }
+
+    #[test]
+    fn test_error_kind_depth_limit_bson() {
+        // Build deeply nested array that exceeds depth limit
+        let mut json = String::new();
+        for _ in 0..600 {
+            json.push('[');
+        }
+        json.push('1');
+        for _ in 0..600 {
+            json.push(']');
+        }
+        let result = BsonParser::parse_one(json.as_bytes());
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::DepthLimit);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_depth_limit_json() {
+        let mut json = String::new();
+        for _ in 0..600 {
+            json.push('[');
+        }
+        json.push('1');
+        for _ in 0..600 {
+            json.push(']');
+        }
+        let result = JsonParser::parse_one(&json);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::DepthLimit);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_depth_limit_stack() {
+        let mut json = String::new();
+        for _ in 0..600 {
+            json.push('[');
+        }
+        json.push('1');
+        for _ in 0..600 {
+            json.push(']');
+        }
+        let mut parser = StackParser::new();
+        parser.feed(json.as_bytes()).unwrap();
+        parser.end_of_input();
+        let result = parser.parse_next();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::DepthLimit);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_depth_limit_custom() {
+        // Use a small custom depth limit
+        let mut parser = BsonParser::new();
+        parser.max_depth(2);
+        parser.feed(b"[[[1]]]").unwrap();
+        parser.end_of_input();
+        let result = parser.parse_full();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind, ParseErrorKind::DepthLimit);
+        }
+    }
+
+    #[test]
+    fn test_error_kind_unexpected_token() {
+        let result = BsonParser::parse_one(b"@");
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(matches!(e.kind, ParseErrorKind::UnexpectedToken { .. }));
+        }
+    }
+
+    #[test]
+    fn test_error_kind_unexpected_token_stack() {
+        let mut parser = StackParser::new();
+        parser.feed(b"@").unwrap();
+        parser.end_of_input();
+        let result = parser.parse_next();
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(matches!(e.kind, ParseErrorKind::UnexpectedToken { .. }));
+        }
+    }
+
+    #[test]
+    fn test_error_kind_invalid_encoding() {
+        // Feed raw invalid UTF-8 inside a string to trigger InvalidEncoding
+        let input: &[u8] = b"\"hello \xff world\"";
+        let result = BsonParser::parse_one(input);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(
+                matches!(e.kind, ParseErrorKind::InvalidEncoding(_)),
+                "Expected InvalidEncoding, got {:?}", e.kind
+            );
+        }
+    }
+
+    #[test]
+    fn test_error_display_formatting() {
+        // Verify ParseError Display impl works for each variant
+        let e = ParseError::new(ParseErrorKind::Incomplete, 5);
+        assert!(e.to_string().contains("incomplete"));
+
+        let e = ParseError::new(ParseErrorKind::TrailingData, 10);
+        assert!(e.to_string().contains("trailing"));
+
+        let e = ParseError::new(ParseErrorKind::DepthLimit, 0);
+        assert!(e.to_string().contains("depth"));
+
+        let e = ParseError::new(ParseErrorKind::InvalidNumber, 3);
+        assert!(e.to_string().contains("number"));
+
+        let e = ParseError::new(ParseErrorKind::InvalidEncoding("bad utf8"), 0);
+        assert!(e.to_string().contains("encoding"));
+
+        let e = ParseError::new(ParseErrorKind::Message("custom"), 0);
+        assert!(e.to_string().contains("custom"));
+
+        let e = ParseError::new(ParseErrorKind::UnexpectedToken {
+            found: "x".to_string(),
+            expected: &["number", "string"],
+        }, 0);
+        let s = e.to_string();
+        assert!(s.contains("unexpected"));
+        assert!(s.contains("x"));
+    }
 }

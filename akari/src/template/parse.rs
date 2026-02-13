@@ -434,9 +434,9 @@ pub fn tokenize<S: Into<String>>(input: S) -> Vec<Token> {
     tokens
 } 
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
-    use super::*; 
+    use super::*;
 
     #[test]
     fn test_tokenize() {
@@ -449,14 +449,218 @@ mod tests {
         -[ block body ]-
             -[ let a = 1 ]-
             -[ for str in list ]-
-                -[ if (a % 2 == 0) ]- 
-                    -[ output str ]- 
-                -[ endif ]- 
+                -[ if (a % 2 == 0) ]-
+                    -[ output str ]-
+                -[ endif ]-
                 -[ a = a + 1 ]-
             -[ endfor ]-
-        -[ endblock ]- 
+        -[ endblock ]-
         "#;
-        let tokens = tokenize(input); 
-        println!("{:?}", tokens); 
-    } 
-} 
+        let tokens = tokenize(input);
+        println!("{:?}", tokens);
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let tokens = tokenize("");
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn test_html_only_no_directives() {
+        let tokens = tokenize("<h1>Hello World</h1>");
+        assert_eq!(tokens.len(), 1);
+        assert!(matches!(&tokens[0], Token::HtmlContent(s) if s == "<h1>Hello World</h1>"));
+    }
+
+    #[test]
+    fn test_empty_directive() {
+        let tokens = tokenize("-[]-");
+        // Empty directive should produce just an EndOfStatement
+        assert_eq!(tokens.len(), 1);
+        assert!(matches!(tokens[0], Token::EndOfStatement));
+    }
+
+    #[test]
+    fn test_directive_whitespace_only() {
+        let tokens = tokenize("-[   ]-");
+        assert_eq!(tokens.len(), 1);
+        assert!(matches!(tokens[0], Token::EndOfStatement));
+    }
+
+    #[test]
+    fn test_unclosed_directive() {
+        // -[ without ]- — lexer should consume to end of input
+        let tokens = tokenize("-[ block header");
+        // Should still produce tokens, just no closing marker consumed
+        assert!(tokens.iter().any(|t| matches!(t, Token::BlockKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndOfStatement)));
+    }
+
+    #[test]
+    fn test_unterminated_string_in_directive() {
+        // String literal without closing quote
+        let tokens = tokenize(r#"-[ template "unclosed ]-"#);
+        // The lexer consumes until it hits a quote or end of input
+        // Should still produce tokens without panicking
+        assert!(!tokens.is_empty());
+    }
+
+    #[test]
+    fn test_escape_sequences_in_string() {
+        let tokens = tokenize(r#"-[ let x = "hello\nworld\t\"quoted\"" ]-"#);
+        let has_string = tokens.iter().any(|t| {
+            if let Token::Object(Obj::Str(s)) = t {
+                s.contains('\n') && s.contains('\t') && s.contains('"')
+            } else {
+                false
+            }
+        });
+        assert!(has_string, "Expected string with escape sequences");
+    }
+
+    #[test]
+    fn test_negative_number() {
+        let tokens = tokenize("-[ let x = -42 ]-");
+        let has_neg = tokens.iter().any(|t| {
+            matches!(t, Token::Object(Obj::Numerical(n)) if *n == -42.0)
+        });
+        assert!(has_neg, "Expected negative number token");
+    }
+
+    #[test]
+    fn test_float_number() {
+        let tokens = tokenize("-[ let x = 3.14 ]-");
+        let has_float = tokens.iter().any(|t| {
+            matches!(t, Token::Object(Obj::Numerical(n)) if (*n - 3.14).abs() < f64::EPSILON)
+        });
+        assert!(has_float, "Expected float number token");
+    }
+
+    #[test]
+    fn test_boolean_literals() {
+        let tokens = tokenize("-[ if true ]- -[ if false ]-");
+        let bools: Vec<_> = tokens.iter().filter(|t| matches!(t, Token::Object(Obj::Boolean(_)))).collect();
+        assert_eq!(bools.len(), 2);
+    }
+
+    #[test]
+    fn test_all_comparison_operators() {
+        let tokens = tokenize("-[ if a == b ]- -[ if a != b ]- -[ if a <= b ]- -[ if a >= b ]- -[ if a < b ]- -[ if a > b ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::EqualsEquals)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::NotEquals)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LessThanEquals)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::GreaterThanEquals)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LessThan)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::GreaterThan)));
+    }
+
+    #[test]
+    fn test_all_arithmetic_operators() {
+        let tokens = tokenize("-[ let x = a + b - c * d / e % f ** g ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::Plus)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Minus)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Multiply)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Divide)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Modulus)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Exponent)));
+    }
+
+    #[test]
+    fn test_assignment_operators() {
+        let tokens = tokenize("-[ a = 1 ]- -[ a += 1 ]- -[ a -= 1 ]- -[ a *= 2 ]- -[ a /= 2 ]- -[ a %= 3 ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::Assignment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::PlusAssignment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::MinusAssignment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::MultiplyAssignment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::DivideAssignment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::ModulusAssignment)));
+    }
+
+    #[test]
+    fn test_increment_decrement() {
+        let tokens = tokenize("-[ a++ ]- -[ b-- ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::Increment)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::Decrement)));
+    }
+
+    #[test]
+    fn test_logical_operators() {
+        let tokens = tokenize("-[ if a && b || !c ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::LogicalAnd)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LogicalOr)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LogicalNot)));
+    }
+
+    #[test]
+    fn test_grouping_and_index() {
+        let tokens = tokenize("-[ output (a + b) ]- -[ output list[0] ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::LeftParen)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::RightParen)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LeftSquareBracket)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::RightSquareBracket)));
+    }
+
+    #[test]
+    fn test_dot_operator() {
+        let tokens = tokenize("-[ output obj.field ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::Dot)));
+    }
+
+    #[test]
+    fn test_all_keywords() {
+        let tokens = tokenize(
+            r#"-[ template "t" ]- -[ insert "i" ]- -[ block b ]- -[ endblock ]- -[ export ]- -[ placeholder ]- -[ let x = 1 ]- -[ for i in list ]- -[ endfor ]- -[ if x ]- -[ endif ]- -[ while x ]- -[ endwhile ]- -[ del x ]- -[ output x ]- -[ match x ]- -[ endmatch ]- -[ case 1 ]- -[ endcase ]-"#
+        );
+        assert!(tokens.iter().any(|t| matches!(t, Token::TemplateKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::InsertKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::BlockKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndBlockKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::ExportKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::PlaceholderKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::LetKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::ForKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::InKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndForKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::IfKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndIfKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::WhileKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndWhileKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::DelKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::OutputKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::MatchKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndMatchKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::CaseKeyword)));
+        assert!(tokens.iter().any(|t| matches!(t, Token::EndCaseKeyword)));
+    }
+
+    #[test]
+    fn test_unrecognized_char_becomes_identifier() {
+        // Characters like @ # $ etc. become single-char identifiers
+        let tokens = tokenize("-[ @ ]-");
+        let has_at = tokens.iter().any(|t| {
+            matches!(t, Token::Identifier(s) if s == "@")
+        });
+        assert!(has_at, "Unrecognized char should become an Identifier");
+    }
+
+    #[test]
+    fn test_adjacent_directives() {
+        let tokens = tokenize("-[ if x ]--[ endif ]-");
+        let end_of_stmts: Vec<_> = tokens.iter().filter(|t| matches!(t, Token::EndOfStatement)).collect();
+        assert_eq!(end_of_stmts.len(), 2);
+    }
+
+    #[test]
+    fn test_html_between_directives() {
+        let tokens = tokenize("-[ if x ]-<p>hello</p>-[ endif ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::HtmlContent(s) if s == "<p>hello</p>")));
+    }
+
+    #[test]
+    fn test_number_parse_failure_becomes_identifier() {
+        // A minus not followed by a digit is treated as Minus operator
+        let tokens = tokenize("-[ - ]-");
+        assert!(tokens.iter().any(|t| matches!(t, Token::Minus)));
+    }
+}

@@ -337,20 +337,21 @@ impl Value {
     /// Converts the Value into a JSON string representation and writes it to a file. 
     /// This function will return an error if the file cannot be written. 
     /// # Example 
-    /// ```rust 
-    /// use akari::Value; 
-    /// 
+    /// ```rust
+    /// use akari::Value;
+    ///
+    /// # std::fs::create_dir_all("test_temp").unwrap();
     /// # #[cfg(feature = "object_macro")]
     /// # {
     /// use akari::object;
     /// // Write a JSON file using object macro
-    /// object!({ 
-    ///    key: "value", 
-    ///    number: 42, 
-    ///    list: [1, 2, 3], 
+    /// object!({
+    ///    key: "value",
+    ///    number: 42,
+    ///    list: [1, 2, 3],
     /// }).into_jsonf("test_temp/write_test.json").expect("Failed to write JSON file");
     /// # }
-    /// 
+    ///
     /// # #[cfg(not(feature = "object_macro"))]
     /// # {
     /// // Alternative approach without the object macro
@@ -399,11 +400,12 @@ impl Value {
     /// Parses a JSON file and returns an Value. 
     /// This function will return an error if the file cannot be read or if the JSON is invalid. 
     /// # Example 
-    /// ```rust 
-    /// use akari::Value; 
-    /// use std::fs; 
+    /// ```rust
+    /// use akari::Value;
+    /// use std::fs;
     /// // Create a JSON file for testing
-    /// fs::write("test_temp/test_read.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap(); 
+    /// # fs::create_dir_all("test_temp").unwrap();
+    /// fs::write("test_temp/test_read.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap();
     /// 
     /// # #[cfg(feature = "object_macro")]
     /// # {
