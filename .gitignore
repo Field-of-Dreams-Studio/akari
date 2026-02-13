@@ -1,7 +1,12 @@
-/target 
-/akari/test_temp/* 
-Cargo.lock 
+/target
+/akari/test_temp/*
 
-/akari/src/object/serializer/DESIGN.md 
-/akari_parser 
-/doc 
+# Cargo.lock should not be committed for library crates
+**/Cargo.lock
+
+# macOS
+**/.DS_Store
+
+/akari/src/object/serializer/DESIGN.md
+/akari_parser
+/doc
