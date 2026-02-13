@@ -115,4 +115,6 @@ fn as_i64_unchecked(&self) -> i64;
 
 ---
 
-This version clarifies intent, reduces ambiguity, and guides users toward safer patterns while preserving usability.
+This version clarifies intent, reduces ambiguity, and guides users toward safer patterns while preserving usability. 
+
+// categories = [ "algorithms", "no-std" ] 

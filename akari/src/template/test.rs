@@ -1,13 +1,15 @@
-use std::collections::HashMap;
+use std::collections::HashMap; 
+
+#[cfg(feature = "object_macro")] 
 use crate::object;
 
-use super::{Value as Obj, TemplateManager};
+use crate::{Value as Obj, TemplateManager};
 use std::fs;
 use std::path::Path;
 #[test] 
 fn test() -> Result<(), Box<dyn std::error::Error>> {
     // Set up test templates directory
-    let template_dir = Path::new("./temp_templates");
+    let template_dir = Path::new("./test_temp/templates_test");
     if !template_dir.exists() {
         fs::create_dir(template_dir)?;
     }
@@ -114,7 +116,7 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
 #[test] 
 fn test2() -> Result<(), Box<dyn std::error::Error>>{ 
     // Set up test templates directory
-    let template_dir = Path::new("./temp_templates");
+    let template_dir = Path::new("./test_temp/templates_test2");
     if !template_dir.exists() {
         fs::create_dir(template_dir)?;
     } 
@@ -152,7 +154,7 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     fs::write(template_dir.join("base.html"), base_layout)?;
     
     // Create a page template that extends the base
-    let page_template = r#"-[ template "base.html" ]-
+    let page_template = r#"-[ template "/base.html" ]-
 
 -[ block head ]-
 <link rel="stylesheet" href="style.css">
@@ -216,6 +218,7 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     Ok(()) 
 }
 
+#[cfg(feature = "object_macro")] 
 #[test] 
 fn test3() -> Result<(), Box<dyn std::error::Error>>{ 
     use crate::Value; 
@@ -227,7 +230,7 @@ fn test3() -> Result<(), Box<dyn std::error::Error>>{
 "#; 
         
         // Initialize the template manager
-        let template_manager = TemplateManager::new(Path::new("./temp_templates"));
+        let template_manager = TemplateManager::new(Path::new("./test_temp/templates_test3"));
         
         // Set up template data
         let mut data = HashMap::new();

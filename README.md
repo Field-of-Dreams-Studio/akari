@@ -1,90 +1,107 @@
-# Akari: Easy template language & Json Implementation  
+### **Akari: Dynamic & Weakly Typed Programming Powered by Rust**
+```bash
+cargo install akari
+``` 
 
-install by 
+https://fds.rs/akari/ 
 
-`cargo install akari` 
+---
 
-Akari is consists of 2 components, one is Json Implementation for rust, and the second component is the template rendering language 
+### **Core Components**
+| Component      | Feature Flag      | Description                                                                 |
+|----------------|-------------------|-----------------------------------------------------------------------------|
+| **Akari Value**| `dynamic` & `object_macro`   | JSON implementation with macros and file I/O                                |
+| **Extensions** | `extension`       | Type/string-based storage for middleware/app logic                          |
+| **Templating** | `template`        | HTML template engine with inheritance and caching                           |
 
-# Akari Json 
+---
 
-Macro is used in creating Akari Json. 
-
-```rust 
-use akari::object; 
-object!({
+### **1. Akari Value (JSON)**
+**Key Features:**
+```rust
+// Create objects
+use akari::object;
+let data = object!({
     number: 3, 
-    string: "Hello", 
-    array: [1, 2, 3], 
-    object: { 
-        a: 1, 
-        b: 2, 
-        c: 3 
+    nested: { 
+        list: [1, 2, 3] 
     }
-}) 
-``` 
+});
 
-Then you can create a Json. 
+// Parse/emit JSON
+let obj = Value::from_json(r#"{"key":"value"}"#)?;
+obj.into_jsonf("data.json")?;  // Write to file
+```
 
-Where you can also use 
+**Important Methods:**
+- `to_string()`: Debug representation
+- `string()`: Extract string value
+- `into_json()`: Serialize to JSON string
+- `is_dict()`/`is_list()`: Type checks
 
-```rust 
-use akari::object; 
-use akari::Value; 
+> Enable `object_macro` feature for `object!` syntax
 
-let json = r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#; 
-let obj = Value::from_json(json).expect("Failed to parse JSON"); 
-let dir = "D://test/test.json"; 
-Value::from_jsonf(dir).unwrap_or(Object::None); // Read a json from a file 
-obj.into_jsonf(dir); // Write obj into the dir 
-``` 
+---
 
-While various of methods are provided to read a value in json. 
+### **2. Extensions System**
+**Type-Based Storage (`Params`):**
+```rust
+let mut params = Params::new();
+params.set(42u8);  // Store by type
+params.get_mut::<u8>().map(|n| *n += 1); 
+```
 
-Be carefun about the difference between `obj.to_string()`, `obj.string()` and `obj.into_json()` 
+**String-Based Storage (`Locals`):**
+```rust
+let mut locals = Locals::new();
+locals.set("counter", 0i32);  // Store by key
+locals.keys();  // ["counter"]
+```
 
-# Templating 
+**Cloneable Variants:**
+- `ParamsClone`: Cloneable type storage
+- `LocalsClone`: Cloneable key-value storage
+- Methods: `combine()` (no overwrite), `merge()` (overwrite)
 
-run to render a template 
+**Bridge Storage Types:**
+```rust
+locals.export_param(&params, "exported_value"); 
+```
 
-`akari render_string "-[ output aaa ]-" aaa=1` 
+---
 
-output: `1` 
+### **3. Templating Engine**
+**Render Templates:**
+```bash
+akari render_string "-[output var]-" var=42  # Output: 42
+```
 
-Read more in starberry example to find out how to write Akari template 
+**Key Features:**
+- Template inheritance with `insert`
+- File-based template caching
+- Logic control structures
 
-https://github.com/Field-of-Dreams-Studio/starberry-example/tree/main 
+> See [Starberry Examples](https://github.com/Field-of-Dreams-Studio/starberry-example) for usage patterns
 
-# Contributing 
+---
 
-You are free to contribute! 
+### **Development & Contribution**
+**Style Guidelines:**  
+Refer to `STYLE.md` for coding standards
 
-Read more in STYLE.md 
+**Update Log Highlights:**
+| Version  | Key Changes                                      |
+|----------|-------------------------------------------------|
+| **0.2.7**| **ValueParser trait redesign with streaming support (final 0.2.x)** |
+| 0.2.6    | Documentation updates, full features enabled    |
+| 0.2.5    | Safer `into_json`, operator implementations     |
+| 0.2.4    | Added `is_<type>()` and `contains()` methods    |
+| 0.2.3    | Renamed types, separated value/template modules |
+| 0.2.2    | Template caching, `insert` keyword support      |
+| 0.1.3    | Critical empty HTML rendering fix               |
 
-# Update log 
+> Full changelog available in source documentation
 
-0.2.4: `is_<type>` functions such as `is_dict()` and so on implemented. New `contains()` function implemented 
+---
 
-0.2.3: Debug, change Value::Dictionary into Value::Dict, Updated Macro 
-
-0.2.3-rc1: Rename Akari's method & Seperate Object mods and Template mod. Change the name of Object into Value 
-
-0.2.2: Debug insert and inheretance of templates 
-
-0.2.2-rc1: Enabled template caching, keyword "insert" now in used to insert another template into a template 
-
-0.2.1: Update documentations for Akari 
-
-0.2.1-rc1: Enabling getting value from the Object through one function, no need for a match statement 
-
-0.2.0: Enable json file read and write 
-
-0.2.0-rc1: Update the macro, enable using complex expression and functions in the macro 
-
-0.1.3: Important Bug Fix: Now template will not causing rendering empty HTML 
-
-0.1.2: Changed object! macro, enable nesting objects 
-
-0.1.1: Enable [] operation and . operation 
-
-0.1.0: Initial Commit 
+**Security Note:** Always validate untrusted JSON input and template variables in production environments.

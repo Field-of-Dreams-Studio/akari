@@ -1,14 +1,31 @@
 [package]
 name = "akari"
-version = "0.2.3"
+version = "0.2.7-rc1"
 edition = "2024" 
 authors = ["Redstone <redstone@fds.moe>"] 
-description = "Template rendering language" 
+description = "Dynamic & Weakly Typed Programming Powered by Rust" 
 repository = "https://github.com/Field-of-Dreams-Studio/akari" 
 homepage = "https://fds.rs/akari/" 
 license = "GPL-3.0-or-later" 
-categories = ["network-programming", "web-programming::http-server" ] 
+categories = ["data-structures", "network-programming", "web-programming::http-server" ] 
 keywords = ["template-rendering", "frontend"]  
 
+[features] 
+default = ["dynamic"] 
+
+dynamic = [] 
+object_macro = ["dep:akari_macro"] 
+
+extension = [] 
+
+template = ["dynamic"] 
+
+bin = ["dynamic", "template"] 
+full = ["dynamic", "object_macro", "extension", "template"]
+
+[[bin]] 
+name = "akari" 
+required-features = ["bin"]  
+
 [dependencies] 
-akari_macro = { version="0.2.0", path="../am" } 
+akari_macro = { version="0.2.0", path="../am", optional=true } 

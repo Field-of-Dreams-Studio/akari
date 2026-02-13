@@ -1,1 +1,7 @@
 /target 
+/akari/test_temp/* 
+Cargo.lock 
+
+/akari/src/object/serializer/DESIGN.md 
+/akari_parser 
+/doc 

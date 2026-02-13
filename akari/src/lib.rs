@@ -1,15 +1,22 @@
-use std::collections::HashMap;
-
-// Include all your existing modules 
+// Export public APIs 
+#[cfg(feature = "dynamic")] 
 mod object; 
-mod template; 
-mod test; 
+#[cfg(feature = "dynamic")]
+pub use object::*; 
 
-// Export public APIs
-pub use object::value::Value; 
-pub use object::error::ValueError; 
+#[cfg(feature = "template")]
+mod template; 
+#[cfg(feature = "template")]
 pub use template::parse::{Token, tokenize};
+#[cfg(feature = "template")]
 pub use template::compile::compile;
+#[cfg(feature = "template")]
 pub use template::template_manager::TemplateManager; 
+
+#[cfg(feature = "object_macro")]
 pub use akari_macro::object; 
+
+#[cfg(any(feature = "extension"))]
+pub mod extensions; 
+
 

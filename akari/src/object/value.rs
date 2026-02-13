@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher}; 
-use super::parse::Parser; 
+use std::hash::{Hash, Hasher};
+use super::parser::JsonParser;
 use super::error::ValueError; 
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Numerical(f64),
     Boolean(bool), 
@@ -11,7 +11,7 @@ pub enum Value {
     List(Vec<Value>),
     Dict(HashMap<String, Value>),  
     None, 
-} 
+}   
 
 impl Value { 
     /// Creates a new Value from a value. 
@@ -302,12 +302,19 @@ impl Value {
     /// let json = obj.into_json(); 
     /// println!("{}", json); // Output: {"key": "value", "number": 42, "list": [1, 2, 3]} 
     /// ``` 
+    /// 
+    /// This function will automatically escape special characters in strings and format the output as a valid JSON string. 
+    /// # Example 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let obj = Value::Str("Hello, \"world\"! \\".to_string()); 
+    /// let json = obj.into_json(); 
+    /// println!("{}", json); // Output: "\"Hello, \\\"world\\\"! \\\"\"" 
+    /// ``` 
     pub fn into_json(&self) -> String {
         match self {
-            Value::None => "none".to_string(), 
-            Value::Numerical(n) => n.to_string(),
-            Value::Boolean(b) => b.to_string(),
-            Value::Str(s) => format!("\"{}\"", s),
+            Value::None | Value::Numerical(_) | Value::Boolean(_) | Value::Str(_) => format!("{}", self), 
             Value::List(l) => {
                 let mut result = String::new();
                 for item in l {
@@ -332,13 +339,34 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use akari::object; 
-    /// // Write a JSON file at "data.json" by using into_jsonf 
+    /// 
+    /// # #[cfg(feature = "object_macro")]
+    /// # {
+    /// use akari::object;
+    /// // Write a JSON file using object macro
     /// object!({ 
     ///    key: "value", 
     ///    number: 42, 
     ///    list: [1, 2, 3], 
-    /// }).into_jsonf("data.json").expect("Failed to write JSON file"); 
+    /// }).into_jsonf("test_temp/write_test.json").expect("Failed to write JSON file");
+    /// # }
+    /// 
+    /// # #[cfg(not(feature = "object_macro"))]
+    /// # {
+    /// // Alternative approach without the object macro
+    /// use std::collections::HashMap;
+    /// let mut dict = HashMap::new();
+    /// dict.insert("key".to_string(), Value::Str("value".to_string()));
+    /// dict.insert("number".to_string(), Value::Numerical(42.0));
+    /// 
+    /// let mut list = Vec::new();
+    /// list.push(Value::Numerical(1.0));
+    /// list.push(Value::Numerical(2.0));
+    /// list.push(Value::Numerical(3.0));
+    /// dict.insert("list".to_string(), Value::List(list));
+    /// 
+    /// Value::Dict(dict).into_jsonf("test_temp/write_test.json").expect("Failed to write JSON file");
+    /// # }
     /// ``` 
     pub fn into_jsonf(&self, file_path: &str) -> Result<(), String> {
         use std::fs;
@@ -361,16 +389,11 @@ impl Value {
     ///     ("list".to_string(), Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])), 
     ///     ]))); 
     /// ``` 
-    /// # Errors 
-    /// This function will return an error if the JSON is invalid or if there are extra characters after the JSON value. 
+    /// # Errors
+    /// This function will return an error if the JSON is invalid or if there are extra characters after the JSON value.
     pub fn from_json(json: &str) -> Result<Self, String> {
-        let mut parser = Parser::new(json);
-        let value = parser.parse_value()?;
-        parser.skip_whitespace();
-        if parser.get_pos() != json.len() {
-            return Err("Extra characters after JSON value".to_string());
-        }
-        Ok(value)
+        use crate::object::parser::ValueParser;
+        JsonParser::parse_one(json).map_err(|e| e.to_string())
     } 
 
     /// Parses a JSON file and returns an Value. 
@@ -378,19 +401,43 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use akari::object; 
     /// use std::fs; 
-    /// // Create a JSON file at "data.json" 
-    /// fs::write("data.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap(); 
+    /// // Create a JSON file for testing
+    /// fs::write("test_temp/test_read.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap(); 
+    /// 
+    /// # #[cfg(feature = "object_macro")]
+    /// # {
+    /// use akari::object;
     /// // Read the JSON file and parse it into an Value 
-    /// let obj = Value::from_jsonf("data.json").expect("Failed to parse JSON file"); 
+    /// let obj = Value::from_jsonf("test_temp/test_read.json").expect("Failed to parse JSON file"); 
     /// assert_eq!(obj, object!({
     ///    key: "value",
     ///    number: 42, 
     ///    list: [1, 2, 3], 
     /// })); 
-    /// // Delete the JSON file after use 
-    /// fs::remove_file("data.json").unwrap(); 
+    /// # }
+    /// 
+    /// # #[cfg(not(feature = "object_macro"))]
+    /// # {
+    /// // Alternative approach without the object macro
+    /// use std::collections::HashMap;
+    /// let obj = Value::from_jsonf("test_temp/test_read.json").expect("Failed to parse JSON file");
+    /// 
+    /// if let Value::Dict(map) = &obj {
+    ///     assert_eq!(map.get("key"), Some(&Value::Str("value".to_string())));
+    ///     assert_eq!(map.get("number"), Some(&Value::Numerical(42.0)));
+    ///     if let Some(Value::List(list)) = map.get("list") {
+    ///         assert_eq!(list.len(), 3);
+    ///         assert_eq!(list[0], Value::Numerical(1.0));
+    ///         assert_eq!(list[1], Value::Numerical(2.0));
+    ///         assert_eq!(list[2], Value::Numerical(3.0));
+    ///     } else {
+    ///         panic!("Expected 'list' to be a List");
+    ///     }
+    /// } else {
+    ///     panic!("Expected a Dict");
+    /// }
+    /// # }
     /// ``` 
     pub fn from_jsonf<T: AsRef<str>>(file_path: T) -> Result<Self, String> {
         use std::fs;
@@ -565,6 +612,84 @@ impl Value {
         }
     } 
 
+    /// Take a value from the dictionary by key.
+    /// If there does not have a valid value, it will return Value::None as default.
+    /// If you want to return a Result<Value, ValueError>, please use try_take
+    /// If you want to set your own default value, please use take_or
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use std::collections::HashMap;
+    /// let mut map = HashMap::new();
+    /// map.insert("key".to_string(), Value::Str("value".to_string()));
+    /// let mut obj = Value::Dict(map);
+    /// let value = obj.take("key");
+    /// assert_eq!(value, Value::Str("value".to_string()));
+    /// ``` 
+    pub fn take<T: AsRef<str>>(&mut self, key: T) -> Value {
+        self.try_take(key).unwrap_or(Value::None)
+    }
+
+    /// Take a value from the dictionary by key, with a specified default value
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use std::collections::HashMap;
+    /// let mut map = HashMap::new();
+    /// map.insert("key".to_string(), Value::Str("value".to_string()));
+    /// let mut obj = Value::Dict(map);
+    /// let default = Value::Str("default".to_string());
+    /// let value = obj.take_or("no_way", default.clone());
+    /// assert_eq!(value, default);
+    /// ``` 
+    pub fn take_or<T: AsRef<str>>(&mut self, key: T, default: Value) -> Value {
+        self.try_take(key).unwrap_or(default)
+    }
+
+    /// Take a value from the dictionary by key.
+    /// This function will remove the value from the dictionary and return it.
+    /// If the key does not exist, it will return an error.
+    /// 
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use std::collections::HashMap;
+    /// let mut map = HashMap::new();
+    /// map.insert("key".to_string(), Value::Str("value".to_string()));
+    /// let mut obj = Value::Dict(map);
+    /// let value = obj.try_take("key");
+    /// assert_eq!(value, Ok(Value::Str("value".to_string())));
+    /// ``` 
+    pub fn try_take<T: AsRef<str>>(&mut self, key: T) -> Result<Value, ValueError> {
+        if let Value::Dict(map) = self {
+            match map.remove(key.as_ref()) {
+                Some(value) => Ok(value),
+                None => Err(ValueError::KeyNotFoundError),
+            }
+        } else {
+            Err(ValueError::TypeError)
+        }
+    }
+
+    /// Take a value from the dictionary by key.
+    /// Panics when error
+    /// # Panics
+    /// When there is no value correspond to the key,
+    /// OR the value is not a dictionary
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use std::collections::HashMap;
+    /// let mut map = HashMap::new();
+    /// map.insert("key".to_string(), Value::Str("value".to_string()));
+    /// let mut obj = Value::Dict(map);
+    /// let value = obj.take_unchecked("key");
+    /// assert_eq!(value, Value::Str("value".to_string()));
+    /// ``` 
+    pub fn take_unchecked<T: AsRef<str>>(&mut self, key: T) -> Value {
+        self.try_take(key).unwrap()
+    } 
+
     /// Deletes a value from the dictionary by key. 
     /// # Example 
     /// ```rust 
@@ -670,8 +795,8 @@ impl Value {
     /// use akari::Value; 
     /// use std::collections::HashMap; 
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
-    /// assert!(list.contains(&Value::Str("value1".to_string()))); 
-    /// assert!(!list.contains(&Value::Str("value3".to_string()))); 
+    /// assert!(list.value_contains(&Value::Str("value1".to_string()))); 
+    /// assert!(!list.value_contains(&Value::Str("value3".to_string()))); 
     /// ``` 
     /// 
     /// ```rust 
@@ -680,34 +805,34 @@ impl Value {
     /// let mut map = HashMap::new(); 
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
-    /// assert!(obj.contains(&Value::Str("value".to_string()))); 
-    /// assert!(!obj.contains(&Value::Str("other_value".to_string()))); 
+    /// assert!(obj.value_contains(&Value::Str("value".to_string()))); 
+    /// assert!(!obj.value_contains(&Value::Str("other_value".to_string()))); 
     /// ```
     /// 
     /// ```rust 
     /// use akari::Value; 
     /// use std::collections::HashMap; 
     /// let obj = Value::Numerical(42.0); 
-    /// assert!(obj.contains(&Value::Numerical(42.0))); 
-    /// assert!(!obj.contains(&Value::Numerical(43.0))); 
+    /// assert!(obj.value_contains(&Value::Numerical(42.0))); 
+    /// assert!(!obj.value_contains(&Value::Numerical(43.0))); 
     /// ``` 
     ///  
     /// ```rust 
     /// use akari::Value; 
     /// use std::collections::HashMap; 
     /// let obj = Value::Boolean(true); 
-    /// assert!(obj.contains(&Value::Boolean(true))); 
-    /// assert!(!obj.contains(&Value::Boolean(false))); 
+    /// assert!(obj.value_contains(&Value::Boolean(true))); 
+    /// assert!(!obj.value_contains(&Value::Boolean(false))); 
     /// ``` 
     ///  
     /// ```rust 
     /// use akari::Value; 
     /// use std::collections::HashMap; 
     /// let obj = Value::Str("value".to_string()); 
-    /// assert!(obj.contains(&Value::Str("value".to_string()))); 
-    /// assert!(!obj.contains(&Value::Str("other_value".to_string()))); 
+    /// assert!(obj.value_contains(&Value::Str("value".to_string()))); 
+    /// assert!(!obj.value_contains(&Value::Str("other_value".to_string()))); 
     /// ``` 
-    pub fn contains<'a, T>(&self, value: &'a T) -> bool 
+    pub fn value_contains<'a, T>(&self, value: &'a T) -> bool 
         where &'a Value: From<&'a T> + Sized { 
         match self {
             Value::Dict(map) => map.values().any(|v| { 
@@ -818,9 +943,88 @@ impl Value {
         match self {
             Value::List(vec) => vec.len(),
             Value::Dict(map) => map.len(),
+            Value::None => 0,
             _ => 1,
         }
     } 
+
+    /// Checks if this value is empty.
+    ///
+    /// A value is considered empty if:
+    /// - It's a `List` or `Dict` with no elements
+    /// - It's `None`
+    /// - Otherwise (for `Boolean`, `Numerical`, and `Str`), it's never empty
+    ///
+    /// # Returns
+    ///
+    /// `true` if the value is empty, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use akari::Value; 
+    /// 
+    /// let list = Value::List(vec![]);
+    /// assert!(list.is_empty());
+    ///
+    /// let single = Value::Numerical(42.0);
+    /// assert!(!single.is_empty());
+    ///
+    /// let none = Value::None;
+    /// assert!(none.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    } 
+
+    /// Checks if the Values are the same 
+    pub fn equals(&self, other: &Value) -> bool {
+        match (self, other) {
+            (Value::Numerical(n1), Value::Numerical(n2)) => n1 == n2,
+            (Value::Boolean(b1), Value::Boolean(b2)) => b1 == b2,
+            (Value::Str(s1), Value::Str(s2)) => s1 == s2,
+            (Value::List(l1), Value::List(l2)) => l1 == l2,
+            (Value::Dict(d1), Value::Dict(d2)) => d1 == d2,
+            (Value::None, Value::None) => true,
+            _ => false,
+        }
+    } 
+
+    /// Checks if the Value is greater than another Value. 
+    pub fn greater_than(&self, other: &Value) -> bool {
+        self.numerical() > other.numerical() 
+    } 
+
+    /// Checks if the Value is less than another Value. 
+    pub fn less_than(&self, other: &Value) -> bool {
+        self.numerical() < other.numerical() 
+    } 
+
+    /// Checks if the Value contains another Value. 
+    /// 
+    /// This function will return true if the Value is a List or a Dict and contains the other Value. 
+    /// 
+    /// # Example 
+    /// 
+    /// ```rust 
+    /// use akari::Value; 
+    /// use std::collections::HashMap; 
+    /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
+    /// assert!(list.contains(&Value::Str("value1".to_string()))); 
+    /// let dict = Value::Dict(HashMap::from([ 
+    ///    ("key1".to_string(), Value::Str("value1".to_string())), 
+    ///   ("key2".to_string(), Value::Str("value2".to_string())),
+    ///  ])); 
+    /// assert!(dict.contains(&Value::Str("key1".to_string()))); 
+    /// ``` 
+    pub fn contains(&self, other: &Value) -> bool { 
+        match self { 
+            Value::Str(s) => s.contains(&other.string()), 
+            Value::List(l) => l.contains(other),
+            Value::Dict(d) => d.get(&other.string()).is_some(), 
+            _ => false,
+        } 
+    }
 
     pub fn interal_value_as_string(&self) -> String {
         match self {
@@ -830,13 +1034,42 @@ impl Value {
             _ => "".to_string(),
         }
     } 
+ 
+    pub fn string_repr_safely(&self) -> String {
+        match self {
+            Value::Str(s) => {
+                // Properly escape the string content
+                let mut result = String::with_capacity(s.len() + 2);
+                result.push('"');
+                for c in s.chars() {
+                    match c {
+                        '"' => result.push_str("\\\""),  // Escape double quotes
+                        '\\' => result.push_str("\\\\"), // Escape backslashes
+                        '\n' => result.push_str("\\n"),  // Escape newlines
+                        '\r' => result.push_str("\\r"),  // Escape carriage returns
+                        '\t' => result.push_str("\\t"),  // Escape tabs
+                        '\u{0008}' => result.push_str("\\b"), // Escape backspace
+                        '\u{000C}' => result.push_str("\\f"), // Escape form feed
+                        _ if c.is_control() => {
+                            // Escape other control characters as unicode
+                            result.push_str(&format!("\\u{:04x}", c as u32));
+                        }
+                        _ => result.push(c), // Regular characters pass through unchanged
+                    }
+                }
+                result.push('"');
+                result
+            }, 
+            _ => "".to_string(), 
+        }
+    } 
 
     pub fn format(&self) -> String {
         match self {
-            Value::None => "none".to_string(),
+            Value::None => "null".to_string(),
             Value::Numerical(n) => format!("{}", n),
             Value::Boolean(b) => format!("{}", b),
-            Value::Str(s) => format!("\"{}\"", s),
+            Value::Str(_) => format!("{}", self.string_repr_safely()), 
             Value::List(l) => {
                 let mut result = String::new();
                 for item in l {

@@ -6,6 +6,9 @@ pub mod compile;
 pub mod template_manager; 
 pub mod templates;  
 
+#[cfg(test)] 
+mod test; 
+
 /// Renders a template string with provided data
 ///
 /// # Arguments

@@ -1,8 +1,72 @@
-#[cfg(test)]
+#[cfg(all(feature = "object_macro", test))]
 mod tests {
     use std::collections::HashMap;
     use akari_macro::object; 
     use super::super::value::*; 
+
+    #[test] 
+    fn new_value(){ 
+        let a: Value = "some_string".into(); // Using Into for any primitive data type 
+
+        // Using macro 
+        let b = object!("another_string"); 
+        let dict = object!({
+            a: "string", 
+            b: [1, 2, 3] 
+        }); 
+
+        println!("{}, {}, {}", a, b, dict)
+    }
+
+    #[test] 
+    fn addition(){ 
+        use super::super::value::Value; 
+        let obj = object!({a: 1, b: true, c: "hello"});
+        let mut new_obj = Value::new_dict(); 
+        new_obj += object!({a: 1, b: true});
+        let new_obj = new_obj + object!({c: "hello"}); 
+        assert_eq!(obj, new_obj); 
+
+        let mut list = object!([1, "pmine", true]);
+        list += object!({dict: "dict"}); 
+        println!("{:?}", list); 
+    } 
+
+    #[test] 
+    fn multiplication(){ 
+        use super::super::value::Value; 
+        let obj = object!({a: 1, b: true, c: "hello"});
+        let mut new_obj = Value::new_dict(); 
+        new_obj *= object!({a: 1, b: true});
+        let new_obj = new_obj * object!({c: "hello"}); 
+        println!("{}, {}", obj, new_obj); 
+
+        let mut list = object!([1, "pmine", true]);
+        list *= object!({dict: "dict"}); 
+        println!("{}", list); 
+    } 
+
+    #[test]
+    fn into_json() {
+        let obj = object!({a: 1, b: true, c: "hello"});
+        let json = obj.into_json();
+        println!("{:?}", json); 
+    } 
+
+    #[test] 
+    fn into_json_dangerous_string() {
+        let obj = object!({a: 1, b: true, c: "\"hello\"\\"});
+        let json = obj.into_json();
+        println!("{:?}", json); 
+        obj.into_jsonf("./data.json").expect("Failed to write JSON to file"); 
+    } 
+
+    #[test] 
+    fn into_json_unicode_escape() {
+        let obj = Value::from_json(r#"{"a": "hello", "b": "\u2392\uaf34\uaa90\u8482\u8848"}"#).expect("Failed to parse JSON");
+        let json = obj.into_json();
+        println!("{}", json); 
+    } 
     
     #[test]
     fn test_from_json_object() {
@@ -27,6 +91,7 @@ mod tests {
     }
     
     #[test]
+    #[allow(unused_variables)]
     fn test_from_json_nested() {
         let json = r#"{"a": [true, false], "b": {"nested": "value"}}"#;
         let obj = Value::from_json(json).expect("Failed to parse JSON");
@@ -41,6 +106,20 @@ mod tests {
         expected_map.insert("b".to_string(), Value::Boolean(true));
         expected_map.insert("c".to_string(), Value::Str("hello".to_string()));
         assert_eq!(obj, Value::Dict(expected_map));
+    } 
+
+    #[test] 
+    fn test_none_null() { 
+        let obj = Value::from_json(r#"
+            {"a": null, "b": "hello", "c": 42}
+        "#).expect("Failed to parse JSON"); 
+        let mut expected_map = HashMap::new(); 
+        expected_map.insert("a".to_string(), Value::None); 
+        expected_map.insert("b".to_string(), Value::Str("hello".to_string())); 
+        expected_map.insert("c".to_string(), Value::Numerical(42.0)); 
+        assert_eq!(obj, Value::Dict(expected_map)); 
+
+        println!("{}", object!({a: Value::None}).into_json()); 
     } 
 
     #[test] 

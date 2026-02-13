@@ -15,9 +15,13 @@ pub enum Token {
     ForKeyword,              // e.g., "for"
     InKeyword,               // e.g., "in"
     IfKeyword,               // e.g., "if"
+    MatchKeyword,            // e.g., "match" 
+    CaseKeyword,             // e.g., "case" 
     OutputKeyword,           // e.g., "output"
     EndIfKeyword,            // e.g., "endif"
     EndForKeyword,           // e.g., "endfor"
+    EndMatchKeyword,         // e.g., "endmatch" 
+    EndCaseKeyword,          // e.g., "endcase" 
     WhileKeyword,            // e.g., "while"
     EndWhileKeyword,         // e.g., "endwhile"
     DelKeyword,              // e.g., "del" 
@@ -78,7 +82,7 @@ pub enum Token {
 pub struct Lexer {
     input: String,
     pos: usize,
-}
+} 
 
 impl Lexer {
     /// Creates a new Lexer instance from a given input.
@@ -361,6 +365,10 @@ impl Lexer {
             "while" => Token::WhileKeyword,
             "endwhile" => Token::EndWhileKeyword,
             "del" => Token::DelKeyword,
+            "match" => Token::MatchKeyword, 
+            "endmatch" => Token::EndMatchKeyword, 
+            "case" => Token::CaseKeyword, 
+            "endcase" => Token::EndCaseKeyword, 
             _ => Token::Identifier(word.to_string()),
         }
     }

@@ -5,4 +5,7 @@ pub enum ValueError {
     IndexOutOfBoundError, 
     IOError, 
     ParseError, 
+    InvalidOperationError, 
+    DivisionByZeroError, 
+    IndexOutOfBoundsError, 
 } 
