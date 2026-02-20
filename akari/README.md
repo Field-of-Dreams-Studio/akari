@@ -81,7 +81,7 @@ akari render_string "-[output var]-" var=42  # Output: 42
 - File-based template caching
 - Logic control structures
 
-> See [Starberry Examples](https://github.com/Field-of-Dreams-Studio/starberry-example) for usage patterns
+> See [Hotaru Examples](https://github.com/Field-of-Dreams-Studio/hotaru) for usage patterns
 
 ---
 
@@ -92,7 +92,8 @@ Refer to `STYLE.md` for coding standards
 **Update Log Highlights:**
 | Version  | Key Changes                                      |
 |----------|-------------------------------------------------|
-| 0.2.7    | Trait based design for parser      |
+| **0.2.7**| **ValueParser trait redesign with streaming support (final 0.2.x)** |
+| 0.2.6    | Documentation updates, full features enabled    |
 | 0.2.5    | Safer `into_json`, operator implementations     |
 | 0.2.4    | Added `is_<type>()` and `contains()` methods    |
 | 0.2.3    | Renamed types, separated value/template modules |
@@ -103,4 +104,4 @@ Refer to `STYLE.md` for coding standards
 
 ---
 
-**Security Note:** Always validate untrusted JSON input and template variables in production environments. 
+**Security Note:** Always validate untrusted JSON input and template variables in production environments.

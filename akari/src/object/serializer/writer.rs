@@ -26,7 +26,7 @@ use std::io::Write;
 ///
 /// # Example
 /// ```
-/// use akari::object::serializer::BinWriter;
+/// use akari::BinWriter;
 ///
 /// let mut writer = BinWriter::new();
 /// writer.write_str("Hello");

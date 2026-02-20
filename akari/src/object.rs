@@ -12,4 +12,4 @@ pub use value::Value;
 pub use error::ValueError;
 pub use iter::{IterBorrowed, IterOwned, KVP};
 pub use parser::{ValueParser, BsonParser, JsonParser, StackParser};
-pub use serializer::{ValueSerializer, SerializeError, SerializeErrorKind, BinWriter}; 
+pub use serializer::{ValueSerializer, SerializeError, SerializeErrorKind, BinWriter, JsonSerializer}; 

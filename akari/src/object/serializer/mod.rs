@@ -20,16 +20,12 @@
 //!
 //! # Trait Design
 //!
-//! The `ValueSerializer<T>` trait mirrors `ValueParser<T>` for consistency:
+//! `ValueSerializer<O>` intentionally stays minimal:
+//! - `serialize_one(&Value) -> Output` for owned one-shot serialization
+//! - `serialize_to(&Value, &mut impl Write)` for streaming to writers
 //!
-//! | Parser Method | Serializer Method | Purpose |
-//! |---------------|-------------------|---------|
-//! | `create(input)` | `create(value)` | Initialize |
-//! | `append(input)` | `append(value)` | Add data |
-//! | `parse(input)` | `serialize(value)` | One-shot |
-//! | `fparse()` | `fserialize()` | Full/complete |
-//! | `pparse()` | `pserialize()` | Partial/streaming |
-//! | `pos()` | `pos()` | Position tracking |
+//! This keeps parser/serializer APIs conceptually aligned while avoiding forced
+//! stateful serializer machinery where it is not needed.
 
 mod trait_def;
 mod error;
@@ -40,6 +36,4 @@ pub mod json;
 pub use trait_def::ValueSerializer;
 pub use error::{SerializeError, SerializeErrorKind};
 pub use writer::BinWriter;
-
-// Future serializer implementations will be added here:
-// pub use json::JsonSerializer;
+pub use json::JsonSerializer;

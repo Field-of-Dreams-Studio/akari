@@ -313,24 +313,9 @@ impl Value {
     /// println!("{}", json); // Output: "\"Hello, \\\"world\\\"! \\\"\"" 
     /// ``` 
     pub fn into_json(&self) -> String {
-        match self {
-            Value::None | Value::Numerical(_) | Value::Boolean(_) | Value::Str(_) => format!("{}", self), 
-            Value::List(l) => {
-                let mut result = String::new();
-                for item in l {
-                    result.push_str(&format!("{}, ", item.into_json()));
-                }
-                if result.len() >= 2 { result.truncate(result.len() - 2); }
-                format!("[{}]", result)
-            }
-            Value::Dict(d) => {
-                let mut result = String::new();
-                for (key, value) in d {
-                    result.push_str(&format!("\"{}\": {}, ", key, value.into_json()));
-                }
-                if result.len() >= 2 { result.truncate(result.len() - 2); }
-                format!("{{{}}}", result)
-            }
+        match <super::JsonSerializer as super::ValueSerializer<str>>::serialize_one(self) {
+            Ok(json) => json,
+            Err(_) => "null".to_string(),
         }
     } 
 
@@ -369,9 +354,11 @@ impl Value {
     /// # }
     /// ``` 
     pub fn into_jsonf(&self, file_path: &str) -> Result<(), String> {
-        use std::fs;
-        let json = self.into_json();
-        fs::write(file_path, json).map_err(|e| format!("Failed to write JSON file: {}", e))?;
+        use std::fs::File;
+        let mut file = File::create(file_path)
+            .map_err(|e| format!("Failed to write JSON file: {}", e))?;
+        <super::JsonSerializer as super::ValueSerializer<str>>::serialize_to(self, &mut file)
+            .map_err(|e| format!("Failed to write JSON file: {}", e))?;
         Ok(())
     } 
     
@@ -392,7 +379,6 @@ impl Value {
     /// # Errors
     /// This function will return an error if the JSON is invalid or if there are extra characters after the JSON value.
     pub fn from_json(json: &str) -> Result<Self, String> {
-        use crate::object::parser::ValueParser;
         JsonParser::parse_one(json).map_err(|e| e.to_string())
     } 
 
@@ -1035,6 +1021,13 @@ impl Value {
         }
     } 
  
+    /// Returns a display-safe string representation of a `Value::Str`.
+    ///
+    /// **Not JSON** — this is for human-readable repr used by [`format`](Value::format) and
+    /// [`Display`](std::fmt::Display). Uses JSON-style escape sequences purely for readability,
+    /// not for interchange. For actual JSON output use [`JsonSerializer`](super::JsonSerializer) instead.
+    ///
+    /// Returns an empty string for non-`Str` variants.
     pub fn string_repr_safely(&self) -> String {
         match self {
             Value::Str(s) => {
@@ -1064,6 +1057,11 @@ impl Value {
         }
     } 
 
+    /// Returns a human-readable representation of the `Value`.
+    ///
+    /// **Not JSON** — Dict uses `{type key = value}` syntax and is not valid JSON.
+    /// This is the backing implementation for [`Display`](std::fmt::Display).
+    /// For JSON output use [`JsonSerializer`](super::JsonSerializer) instead.
     pub fn format(&self) -> String {
         match self {
             Value::None => "null".to_string(),

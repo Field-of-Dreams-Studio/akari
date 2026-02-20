@@ -81,7 +81,7 @@ akari render_string "-[output var]-" var=42  # Output: 42
 - File-based template caching
 - Logic control structures
 
-> See [Starberry Examples](https://github.com/Field-of-Dreams-Studio/starberry-example) for usage patterns
+> See [Hotaru Examples](https://github.com/Field-of-Dreams-Studio/hotaru) for usage patterns
 
 ---
 
