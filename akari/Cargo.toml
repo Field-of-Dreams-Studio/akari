@@ -1,6 +1,6 @@
 [package]
 name = "akari"
-version = "0.2.7"
+version = "0.2.8"
 edition = "2024" 
 authors = ["Redstone <redstone@fds.moe>"] 
 description = "Dynamic & Weakly Typed Programming Powered by Rust" 
@@ -28,4 +28,4 @@ name = "akari"
 required-features = ["bin"]  
 
 [dependencies] 
-akari_macro = { version="0.2.0", path="../am", optional=true } 
+akari_macro = { version="0.2.1", path="../am", optional=true } 

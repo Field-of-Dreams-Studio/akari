@@ -124,8 +124,56 @@ impl Params {
             .remove(&TypeId::of::<T>())
             .and_then(|boxed| boxed.downcast::<T>().ok())
             .map(|boxed| *boxed)
-    } 
-}  
+    }
+
+    /// Combines entries from `other` into `self`, consuming `other`.
+    ///
+    /// For each type not already present in `self`, moves the boxed value from `other`.
+    /// Because `Params` stores non-`Clone` boxed values, `other` must be consumed
+    /// rather than borrowed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use akari::extensions::Params;
+    ///
+    /// let mut a = Params::default();
+    /// a.set(1u8);
+    /// let mut b = Params::default();
+    /// b.set(2u8);
+    /// a.combine(b);
+    /// assert_eq!(a.get::<u8>(), Some(&1u8));
+    /// ```
+    pub fn combine(&mut self, other: Self) {
+        for (ty, value) in other.inner {
+            self.inner.entry(ty).or_insert(value);
+        }
+    }
+
+    /// Merges entries from `other` into `self`, consuming `other`.
+    ///
+    /// For each type, replaces the value in `self` with the one from `other`.
+    /// Because `Params` stores non-`Clone` boxed values, `other` must be consumed
+    /// rather than borrowed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use akari::extensions::Params;
+    ///
+    /// let mut a = Params::default();
+    /// a.set(1u8);
+    /// let mut b = Params::default();
+    /// b.set(2u8);
+    /// a.merge(b);
+    /// assert_eq!(a.get::<u8>(), Some(&2u8));
+    /// ```
+    pub fn merge(&mut self, other: Self) {
+        for (ty, value) in other.inner {
+            self.inner.insert(ty, value);
+        }
+    }
+}
 
 impl fmt::Display for Params {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -321,14 +369,65 @@ impl Locals {
     } 
 
     /// Imports a local value into the params storage.
-    /// The value must implement Clone. Does nothing if the local doesn't exist. bv 
+    /// The value must implement Clone. Does nothing if the local doesn't exist. bv
     pub fn import_param<T: 'static + Clone + Send + Sync>(&mut self, params: &mut Params, key: &str) {
         if let Some(value) = self.get::<T>(key) {
             let cloned = value.clone();
             params.set(cloned);
         }
-    } 
-} 
+    }
+
+    /// Combines entries from `other` into `self`, consuming `other`.
+    ///
+    /// For each key not already present in `self`, moves the boxed value from `other`.
+    /// Because `Locals` stores non-`Clone` boxed values, `other` must be consumed
+    /// rather than borrowed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use akari::extensions::Locals;
+    ///
+    /// let mut a = Locals::default();
+    /// a.set("x", 1i32);
+    /// let mut b = Locals::default();
+    /// b.set("y", 2i32);
+    /// a.combine(b);
+    /// assert_eq!(a.get::<i32>("x"), Some(&1));
+    /// assert_eq!(a.get::<i32>("y"), Some(&2));
+    /// ```
+    pub fn combine(&mut self, other: Self) {
+        for (key, value) in other.inner {
+            self.inner.entry(key).or_insert(value);
+        }
+    }
+
+    /// Merges entries from `other` into `self`, consuming `other`.
+    ///
+    /// For each key, replaces the value in `self` with the one from `other`.
+    /// Because `Locals` stores non-`Clone` boxed values, `other` must be consumed
+    /// rather than borrowed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use akari::extensions::Locals;
+    ///
+    /// let mut a = Locals::default();
+    /// a.set("x", 1i32);
+    /// let mut b = Locals::default();
+    /// b.set("x", 9i32);
+    /// b.set("y", 2i32);
+    /// a.merge(b);
+    /// assert_eq!(a.get::<i32>("x"), Some(&9));
+    /// assert_eq!(a.get::<i32>("y"), Some(&2));
+    /// ```
+    pub fn merge(&mut self, other: Self) {
+        for (key, value) in other.inner {
+            self.inner.insert(key, value);
+        }
+    }
+}
 
 impl fmt::Display for Locals {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

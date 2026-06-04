@@ -90,15 +90,16 @@ akari render_string "-[output var]-" var=42  # Output: 42
 Refer to `STYLE.md` for coding standards
 
 **Update Log Highlights:**
-| Version  | Key Changes                                      |
-|----------|-------------------------------------------------|
-| **0.2.7**| **ValueParser trait redesign with streaming support (final 0.2.x)** |
-| 0.2.6    | Documentation updates, full features enabled    |
-| 0.2.5    | Safer `into_json`, operator implementations     |
-| 0.2.4    | Added `is_<type>()` and `contains()` methods    |
-| 0.2.3    | Renamed types, separated value/template modules |
-| 0.2.2    | Template caching, `insert` keyword support      |
-| 0.1.3    | Critical empty HTML rendering fix               |
+| Version  | Key Changes                                       |
+|----------|---------------------------------------------------|
+| 0.2.8    | `no_std` update                                   |
+| 0.2.7    | ValueParser trait redesign with streaming support |
+| 0.2.6    | Documentation updates, full features enabled      |
+| 0.2.5    | Safer `into_json`, operator implementations       |
+| 0.2.4    | Added `is_<type>()` and `contains()` methods      |
+| 0.2.3    | Renamed types, separated value/template modules   |
+| 0.2.2    | Template caching, `insert` keyword support        |
+| 0.1.3    | Critical empty HTML rendering fix                 |
 
 > Full changelog available in source documentation
 

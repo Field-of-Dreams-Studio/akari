@@ -834,26 +834,131 @@ impl Value {
         } 
     } 
 
-    /// Sets a value in the list by index. 
-    /// # Example 
-    /// ```rust 
-    /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
-    /// list.insert(1, Value::Str("new_value".to_string())); 
-    /// let value = list.idx(1); 
-    /// assert_eq!(value, &Value::Str("new_value".to_string())); 
-    /// ``` 
-    /// This function will push the value to the end of the list if the index is out of bounds. 
-    pub fn insert(&mut self, index: usize, value: Value) {
+    /// Replaces the value at `index` in the list.
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]);
+    /// list.set_idx(1, Value::Str("new_value".to_string()));
+    /// assert_eq!(list.idx(1), &Value::Str("new_value".to_string()));
+    /// ```
+    /// Silently no-ops if `index` is out of bounds or the value is not a list.
+    /// Use [`Value::try_set_idx`] for explicit error handling or
+    /// [`Value::set_idx_unchecked`] to panic on failure.
+    pub fn set_idx(&mut self, index: usize, value: Value) {
         if let Value::List(vec) = self {
             if index < vec.len() {
                 vec[index] = value;
-            } else {
-                vec.push(value);
             }
         }
-    } 
+    }
+
+    /// Replaces the value at `index`, returning an error if the index is out
+    /// of bounds or the value is not a list.
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use akari::ValueError;
+    /// let mut list = Value::List(vec![Value::Str("value1".to_string())]);
+    /// assert!(list.try_set_idx(0, Value::Str("new".to_string())).is_ok());
+    /// assert_eq!(list.try_set_idx(5, Value::None), Err(ValueError::IndexOutOfBoundError));
+    /// ```
+    pub fn try_set_idx(&mut self, index: usize, value: Value) -> Result<(), ValueError> {
+        if let Value::List(vec) = self {
+            if index < vec.len() {
+                vec[index] = value;
+                Ok(())
+            } else {
+                Err(ValueError::IndexOutOfBoundError)
+            }
+        } else {
+            Err(ValueError::TypeError)
+        }
+    }
+
+    /// Replaces the value at `index`, panicking if the index is out of bounds
+    /// or the value is not a list.
+    /// # Panics
+    /// Panics if `self` is not a `Value::List` or `index >= len`.
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// let mut list = Value::List(vec![Value::Str("value1".to_string())]);
+    /// list.set_idx_unchecked(0, Value::Str("new".to_string()));
+    /// assert_eq!(list.idx(0), &Value::Str("new".to_string()));
+    /// ```
+    pub fn set_idx_unchecked(&mut self, index: usize, value: Value) {
+        if let Value::List(vec) = self {
+            vec[index] = value;
+        } else {
+            panic!("Value is not a list")
+        }
+    }
+
+    /// Inserts a value at `index`, shifting all later elements to the right
+    /// (matches `Vec::insert` semantics).
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// let mut list = Value::List(vec![Value::Str("a".to_string()), Value::Str("c".to_string())]);
+    /// list.insert(1, Value::Str("b".to_string()));
+    /// assert_eq!(list.idx(1), &Value::Str("b".to_string()));
+    /// assert_eq!(list.idx(2), &Value::Str("c".to_string()));
+    /// ```
+    /// Accepts `index == len` (equivalent to push). Silently no-ops if
+    /// `index > len` or the value is not a list. Use [`Value::try_insert`] for
+    /// explicit error handling or [`Value::insert_unchecked`] to panic on failure.
+    pub fn insert(&mut self, index: usize, value: Value) {
+        if let Value::List(vec) = self {
+            if index <= vec.len() {
+                vec.insert(index, value);
+            }
+        }
+    }
+
+    /// Inserts a value at `index` with shift-right semantics, returning an
+    /// error if the index is out of bounds or the value is not a list.
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// use akari::ValueError;
+    /// let mut list = Value::List(vec![Value::Str("a".to_string())]);
+    /// assert!(list.try_insert(0, Value::Str("z".to_string())).is_ok());
+    /// assert_eq!(list.try_insert(99, Value::None), Err(ValueError::IndexOutOfBoundError));
+    /// ```
+    pub fn try_insert(&mut self, index: usize, value: Value) -> Result<(), ValueError> {
+        if let Value::List(vec) = self {
+            if index <= vec.len() {
+                vec.insert(index, value);
+                Ok(())
+            } else {
+                Err(ValueError::IndexOutOfBoundError)
+            }
+        } else {
+            Err(ValueError::TypeError)
+        }
+    }
+
+    /// Inserts a value at `index` with shift-right semantics, panicking if
+    /// the index is out of bounds or the value is not a list.
+    /// # Panics
+    /// Panics if `self` is not a `Value::List` or `index > len`.
+    /// # Example
+    /// ```rust
+    /// use akari::Value;
+    /// let mut list = Value::List(vec![Value::Str("a".to_string())]);
+    /// list.insert_unchecked(0, Value::Str("z".to_string()));
+    /// assert_eq!(list.idx(0), &Value::Str("z".to_string()));
+    /// ```
+    pub fn insert_unchecked(&mut self, index: usize, value: Value) {
+        if let Value::List(vec) = self {
+            vec.insert(index, value);
+        } else {
+            panic!("Value is not a list")
+        }
+    }
+
+    
 
     /// Pushes a value to the end of the list. 
     /// # Example 
