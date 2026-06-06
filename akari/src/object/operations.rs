@@ -1,5 +1,8 @@
-use std::collections::HashMap; 
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+use crate::hash::HashMap;
 use super::error::ValueError;
+use super::value::float::FloatExt;
 use core::ops::{Index, Range, RangeFrom, RangeTo, RangeFull};
 use super::value::Value; 
 
@@ -481,7 +484,7 @@ impl Value {
             
             // String repetition
             (Value::Str(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     Value::Str(a.repeat(count as usize))
                 } else {
@@ -489,7 +492,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::Str(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     Value::Str(b.repeat(count as usize))
                 } else {
@@ -499,7 +502,7 @@ impl Value {
             
             // List repetition
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -511,7 +514,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::List(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -525,7 +528,7 @@ impl Value {
             
             // Dict repetition (creates list of dicts)
             (Value::Dict(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -537,7 +540,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::Dict(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -585,7 +588,7 @@ impl Value {
             
             // String repetition
             (Value::Str(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     Ok(Value::Str(a.repeat(count as usize)))
                 } else {
@@ -593,7 +596,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::Str(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     Ok(Value::Str(b.repeat(count as usize)))
                 } else {
@@ -603,7 +606,7 @@ impl Value {
             
             // List repetition
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -615,7 +618,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::List(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -629,7 +632,7 @@ impl Value {
             
             // Dict repetition (creates list of dicts)
             (Value::Dict(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -641,7 +644,7 @@ impl Value {
                 }
             },
             (Value::Numerical(a), Value::Dict(b)) => {
-                if a.fract() == 0.0 && *a >= 0.0 {
+                if a.fract2() == 0.0 && *a >= 0.0 {
                     let count = *a as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -784,9 +787,9 @@ impl Value {
             
             // List chunking
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b > 0.0 {
+                if b.fract2() == 0.0 && *b > 0.0 {
                     let chunks = *b as usize;
-                    let chunk_size = (a.len() as f64 / *b).ceil() as usize;
+                    let chunk_size = (a.len() as f64 / *b).ceil2() as usize;
                     let mut result = Vec::new();
                     
                     for i in 0..chunks {
@@ -807,7 +810,7 @@ impl Value {
             
             // Dict chunking to lists of dictionaries
             (Value::Dict(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b > 0.0 {
+                if b.fract2() == 0.0 && *b > 0.0 {
                     let chunks = *b as usize;
                     
                     // Convert to entries
@@ -815,7 +818,7 @@ impl Value {
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect();
                     
-                    let chunk_size = (entries.len() as f64 / *b).ceil() as usize;
+                    let chunk_size = (entries.len() as f64 / *b).ceil2() as usize;
                     let mut result = Vec::new();
                     
                     for i in 0..chunks {
@@ -825,7 +828,7 @@ impl Value {
                         }
                         let end = ((i + 1) * chunk_size).min(entries.len());
                         
-                        let mut chunk_dict = HashMap::new();
+                        let mut chunk_dict = HashMap::default();
                         for (k, v) in &entries[start..end] {
                             chunk_dict.insert(k.clone(), v.clone());
                         }
@@ -899,9 +902,9 @@ impl Value {
             
             // List chunking
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b > 0.0 {
+                if b.fract2() == 0.0 && *b > 0.0 {
                     let chunks = *b as usize;
-                    let chunk_size = (a.len() as f64 / *b).ceil() as usize;
+                    let chunk_size = (a.len() as f64 / *b).ceil2() as usize;
                     let mut result = Vec::new();
                     
                     for i in 0..chunks {
@@ -924,7 +927,7 @@ impl Value {
             
             // Dict chunking
             (Value::Dict(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b > 0.0 {
+                if b.fract2() == 0.0 && *b > 0.0 {
                     let chunks = *b as usize;
                     
                     // Convert to entries
@@ -932,7 +935,7 @@ impl Value {
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect();
                     
-                    let chunk_size = (entries.len() as f64 / *b).ceil() as usize;
+                    let chunk_size = (entries.len() as f64 / *b).ceil2() as usize;
                     let mut result = Vec::new();
                     
                     for i in 0..chunks {
@@ -942,7 +945,7 @@ impl Value {
                         }
                         let end = ((i + 1) * chunk_size).min(entries.len());
                         
-                        let mut chunk_dict = HashMap::new();
+                        let mut chunk_dict = HashMap::default();
                         for (k, v) in &entries[start..end] {
                             chunk_dict.insert(k.clone(), v.clone());
                         }
@@ -1061,7 +1064,7 @@ impl Value {
                     Value::None
                 } else {
                     // Follow Python's modulo behavior: a % b = a - b * floor(a / b)
-                    let result = a - b * (a / b).floor();
+                    let result = a - b * (a / b).floor2();
                     Value::Numerical(result)
                 }
             },
@@ -1079,7 +1082,7 @@ impl Value {
                     Value::None
                 } else {
                     let b_int = *b as i64 as f64;
-                    let result = a - b_int * (a / b_int).floor();
+                    let result = a - b_int * (a / b_int).floor2();
                     Value::Numerical(result)
                 }
             },
@@ -1088,7 +1091,7 @@ impl Value {
                     Value::None
                 } else {
                     let a_int = *a as i64 as f64;
-                    let result = a_int - b * (a_int / b).floor();
+                    let result = a_int - b * (a_int / b).floor2();
                     Value::Numerical(result)
                 }
             },
@@ -1146,7 +1149,7 @@ impl Value {
                     Err(ValueError::DivisionByZeroError)
                 } else {
                     // Follow Python's modulo behavior: a % b = a - b * floor(a / b)
-                    let result = a - b * (a / b).floor();
+                    let result = a - b * (a / b).floor2();
                     Ok(Value::Numerical(result))
                 }
             },
@@ -1164,7 +1167,7 @@ impl Value {
                     Err(ValueError::DivisionByZeroError)
                 } else {
                     let b_int = *b as i64 as f64;
-                    let result = a - b_int * (a / b_int).floor();
+                    let result = a - b_int * (a / b_int).floor2();
                     Ok(Value::Numerical(result))
                 }
             },
@@ -1173,7 +1176,7 @@ impl Value {
                     Err(ValueError::DivisionByZeroError)
                 } else {
                     let a_int = *a as i64 as f64;
-                    let result = a_int - b * (a_int / b).floor();
+                    let result = a_int - b * (a_int / b).floor2();
                     Ok(Value::Numerical(result))
                 }
             },
@@ -1287,23 +1290,23 @@ impl Value {
         match (self, rhs) {
             // Numerical ** Numerical
             (Value::Numerical(a), Value::Numerical(b)) => {
-                Value::Numerical(a.powf(*b))
+                Value::Numerical(a.powf2(*b))
             },
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => {
-                Value::Numerical((*a as i64 as f64).powf(*b as i64 as f64))
+                Value::Numerical((*a as i64 as f64).powf2(*b as i64 as f64))
             },
             (Value::Numerical(a), Value::Boolean(b)) => {
-                Value::Numerical(a.powf(*b as i64 as f64))
+                Value::Numerical(a.powf2(*b as i64 as f64))
             },
             (Value::Boolean(a), Value::Numerical(b)) => {
-                Value::Numerical((*a as i64 as f64).powf(*b))
+                Value::Numerical((*a as i64 as f64).powf2(*b))
             },
             
             // String repetition (same as multiplication)
             (Value::Str(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     Value::Str(a.repeat(count as usize))
                 } else {
@@ -1313,7 +1316,7 @@ impl Value {
             
             // List repetition (same as multiplication)
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -1352,23 +1355,23 @@ impl Value {
         match (self, rhs) {
             // Numerical ** Numerical
             (Value::Numerical(a), Value::Numerical(b)) => {
-                Ok(Value::Numerical(a.powf(*b)))
+                Ok(Value::Numerical(a.powf2(*b)))
             },
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => {
-                Ok(Value::Numerical((*a as i64 as f64).powf(*b as i64 as f64)))
+                Ok(Value::Numerical((*a as i64 as f64).powf2(*b as i64 as f64)))
             },
             (Value::Numerical(a), Value::Boolean(b)) => {
-                Ok(Value::Numerical(a.powf(*b as i64 as f64)))
+                Ok(Value::Numerical(a.powf2(*b as i64 as f64)))
             },
             (Value::Boolean(a), Value::Numerical(b)) => {
-                Ok(Value::Numerical((*a as i64 as f64).powf(*b)))
+                Ok(Value::Numerical((*a as i64 as f64).powf2(*b)))
             },
             
             // String repetition
             (Value::Str(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     Ok(Value::Str(a.repeat(count as usize)))
                 } else {
@@ -1378,7 +1381,7 @@ impl Value {
             
             // List repetition
             (Value::List(a), Value::Numerical(b)) => {
-                if b.fract() == 0.0 && *b >= 0.0 {
+                if b.fract2() == 0.0 && *b >= 0.0 {
                     let count = *b as i64;
                     let mut result = Vec::new();
                     for _ in 0..count {
@@ -1475,7 +1478,7 @@ impl Value {
     /// let idx = Value::Numerical(1.0);
     /// assert_eq!(list.get_index(&idx), Value::Numerical(20.0));
     /// 
-    /// let dict = Value::new(std::collections::HashMap::from([("key", "value")]));
+    /// let dict = Value::new(akari::hash::HashMap::from_iter([("key", "value")]));
     /// let key = Value::Str("key".to_string());
     /// assert_eq!(dict.get_index(&key), Value::Str("value".to_string()));
     /// ```
@@ -1735,13 +1738,13 @@ impl Value {
                 let end = range.end.min(entries.len());
                 
                 if start <= end {
-                    let mut new_dict = HashMap::new();
+                    let mut new_dict = HashMap::default();
                     for (key, value) in &entries[start..end] {
                         new_dict.insert(key.clone(), value.clone());
                     }
                     Ok(Value::Dict(new_dict))
                 } else {
-                    Ok(Value::Dict(HashMap::new()))
+                    Ok(Value::Dict(HashMap::default()))
                 }
             },
             _ => Err(ValueError::TypeError),
@@ -2129,13 +2132,13 @@ impl Index<&str> for Value {
 // Comparison operator traits
 
 impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         if self.equals(other) {
-            Some(std::cmp::Ordering::Equal)
+            Some(core::cmp::Ordering::Equal)
         } else if self.less_than(other) {
-            Some(std::cmp::Ordering::Less)
+            Some(core::cmp::Ordering::Less)
         } else if self.greater_than(other) {
-            Some(std::cmp::Ordering::Greater)
+            Some(core::cmp::Ordering::Greater)
         } else {
             None
         }
@@ -2334,9 +2337,9 @@ mod tests {
     
     #[test]
     fn test_dictionary_add() {
-        let mut map1 = HashMap::new();
+        let mut map1 = HashMap::default();
         map1.insert("a".to_string(), Value::Numerical(1.0));
-        let mut map2 = HashMap::new();
+        let mut map2 = HashMap::default();
         map2.insert("b".to_string(), Value::Numerical(2.0));
         map2.insert("a".to_string(), Value::Numerical(3.0));  // This should overwrite a
         
@@ -2405,7 +2408,7 @@ mod tests {
         let string = Value::Str("hello".to_string());
         assert_eq!(string.get_index(&Value::Numerical(1.0)), Value::Str("e".to_string()));
         
-        let mut dict = HashMap::new();
+        let mut dict = HashMap::default();
         dict.insert("key".to_string(), Value::Numerical(42.0));
         let dict_val = Value::Dict(dict);
         
@@ -2471,7 +2474,7 @@ mod tests {
         assert!(list.contains(&Value::Numerical(20.0)));
         assert!(!list.contains(&Value::Numerical(40.0)));
         
-        let mut dict = HashMap::new();
+        let mut dict = HashMap::default();
         dict.insert("key1".to_string(), Value::Numerical(10.0));
         dict.insert("key2".to_string(), Value::Numerical(20.0));
         let dict_val = Value::Dict(dict);
@@ -2494,7 +2497,7 @@ mod tests {
             ])
         );
         
-        let mut dict = HashMap::new();
+        let mut dict = HashMap::default();
         dict.insert("key1".to_string(), Value::Numerical(10.0));
         let dict_val = Value::Dict(dict);
         

@@ -49,7 +49,9 @@
 //!
 //! This is why we keep **both parsers** - different tools for different jobs. 
 
-use std::collections::HashMap;
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+use crate::hash::HashMap;
 use crate::object::Value; 
 use super::error::ParseErrorKind;
 
@@ -92,7 +94,7 @@ impl StackFrame {
     /// Create a new empty Object frame
     pub fn new_object() -> Self {
         StackFrame::Object {
-            map: HashMap::new(),
+            map: HashMap::default(),
             current_key: None,
         }
     }

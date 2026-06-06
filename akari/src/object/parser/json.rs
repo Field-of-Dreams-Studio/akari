@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+use crate::hash::HashMap;
+use crate::object::value::float::FloatExt;
 use crate::object::Value;
 use crate::object::parser::FrameState;
 use crate::object::parser::stack::ValueStack;
@@ -174,7 +177,7 @@ mod primitive_parsing {
                 exp_digits += 1;
             }
             if exp_digits > 0 {
-                value *= 10f64.powi(exp_sign * exp_val);
+                value *= 10f64.powi2(exp_sign * exp_val);
             }
         }
 
@@ -439,7 +442,7 @@ impl BinJsonParser {
             return Err(self.error(ParseErrorKind::DepthLimit));
         }
 
-        let mut map = HashMap::new();
+        let mut map = HashMap::default();
 
         // Consume '{'
         if self.inner.next_byte() != Some(b'{') {

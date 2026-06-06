@@ -3,6 +3,7 @@ mod tests {
     use std::collections::HashMap;
     use akari_macro::object; 
     use super::super::value::*; 
+    use crate as akari; 
 
     #[test] 
     fn new_value(){ 
@@ -169,7 +170,7 @@ mod tests {
         println!("{:?}", obj_obj.format()); 
         assert_eq!(
             obj_obj, 
-            Value::Dict(HashMap::from([
+            Value::Dict(HashMap::from_iter([
                 ("c".to_string(), Value::Str("p".to_string())),
                 ("b".to_string(), Value::List(vec![
                     Value::Str("aaa".to_string()), 

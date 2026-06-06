@@ -1,3 +1,6 @@
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+#[cfg(not(feature = "no_std"))]
 use std::io::Write;
 
 /// Binary writer - format-agnostic output buffer management
@@ -143,7 +146,7 @@ impl BinWriter {
     /// # Panics
     /// Panics if buffer contains invalid UTF-8
     pub fn as_str(&self) -> &str {
-        std::str::from_utf8(&self.buffer).expect("BinWriter buffer contains invalid UTF-8")
+        core::str::from_utf8(&self.buffer).expect("BinWriter buffer contains invalid UTF-8")
     }
 
     // ===== Conversion operations =====
@@ -163,7 +166,7 @@ impl BinWriter {
     /// writer.write_str("{\"name\":\"Alice\"}");
     /// let json = writer.into_string()?;
     /// ```
-    pub fn into_string(self) -> Result<String, std::string::FromUtf8Error> {
+    pub fn into_string(self) -> Result<String, alloc::string::FromUtf8Error> {
         String::from_utf8(self.buffer)
     }
 
@@ -187,6 +190,7 @@ impl BinWriter {
     /// }
     /// writer.flush(&mut file)?; // Final flush
     /// ```
+    #[cfg(not(feature = "no_std"))]
     pub fn flush<W: Write>(&mut self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(&self.buffer)?;
         self.buffer.clear();
@@ -196,6 +200,7 @@ impl BinWriter {
     /// Write buffer to writer without clearing
     ///
     /// Useful when you want to write the buffer but keep it for inspection.
+    #[cfg(not(feature = "no_std"))]
     pub fn write_to<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(&self.buffer)
     }

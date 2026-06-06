@@ -1,16 +1,19 @@
-use std::{
-    any::{Any, TypeId},
-    collections::HashMap,
-    hash::Hash, 
-    fmt 
-};
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+use core::any::{Any, TypeId};
+use core::hash::Hash;
+use core::fmt;
+use crate::hash::{HashMap, IdHashMapTypeId};
 
 
 /// Type-based extension storage, typically used by middleware
 /// Each type can have exactly one value
-pub struct Params { 
-    inner: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
-} 
+pub struct Params {
+    // `TypeId`-keyed → identity-hashed via `IdBuildHasher`. The previous
+    // default `HashMap` ran SipHash on each lookup, which dominates the
+    // per-lookup cost for a typemap of this shape.
+    inner: IdHashMapTypeId<Box<dyn Any + Send + Sync>>,
+}
 
 impl Params { 
     //
@@ -25,11 +28,11 @@ impl Params {
     /// let params = Params::new(); 
     /// // The inner is empty  
     /// ``` 
-    pub fn new() -> Self { 
-        Self { 
-            inner: HashMap::new() 
+    pub fn new() -> Self {
+        Self {
+            inner: IdHashMapTypeId::default(),
         }
-    } 
+    }
 
 
     /// Stores a value in the type-based params storage.
@@ -225,7 +228,7 @@ impl Locals {
     /// ``` 
     pub fn new() -> Self { 
         Self { 
-            inner: HashMap::new() 
+            inner: HashMap::default() 
         }
     }
 
@@ -391,6 +394,7 @@ impl Locals {
     /// let mut a = Locals::default();
     /// a.set("x", 1i32);
     /// let mut b = Locals::default();
+    /// b.set("x", 9i32); // colliding key — `a`'s value wins
     /// b.set("y", 2i32);
     /// a.combine(b);
     /// assert_eq!(a.get::<i32>("x"), Some(&1));
@@ -491,16 +495,18 @@ where
 
 /// Type-based extension storage, typically used by middleware.
 ///
-/// Stores at most one value per type. Internally uses a `HashMap<TypeId, Box<dyn ParamValue>>`.
+/// Stores at most one value per type. Internally uses an identity-hashed
+/// `TypeId`-keyed map (`IdHashMapTypeId`), which avoids running SipHash on
+/// what is already a u128 hash.
 pub struct ParamsClone {
-    inner: HashMap<TypeId, Box<dyn ParamValue>>,
+    inner: IdHashMapTypeId<Box<dyn ParamValue>>,
 }
 
 impl ParamsClone {
     /// Creates a new, empty `ParamsClone` container.
     pub fn new() -> Self {
         Self {
-            inner: HashMap::new(),
+            inner: IdHashMapTypeId::default(),
         }
     }
 
@@ -621,9 +627,10 @@ impl ParamsClone {
         }
     } 
     
-    /// Combines entries from `other` into `self`.
+    /// Merges entries from `other` into `self`.
     ///
-    /// For each type not already present in `self`, clones the boxed value from `other`.
+    /// For each type, clones the boxed value from `other` and replaces any
+    /// existing entry in `self`.
     ///
     /// # Examples
     ///
@@ -633,7 +640,7 @@ impl ParamsClone {
     /// let mut a = ParamsClone::default();
     /// a.set(1u8);
     /// let mut b = ParamsClone::default();
-    /// b.set(2u8);
+    /// b.set(2u8); // colliding type — `b`'s value wins
     /// a.merge(&b);
     /// assert_eq!(a.get::<u8>(), Some(&2u8));
     /// ```
@@ -692,7 +699,7 @@ pub struct LocalsClone {
 impl LocalsClone {
     pub fn new() -> Self {
         Self {
-            inner: HashMap::new(),
+            inner: HashMap::default(),
         }
     }
 
@@ -841,7 +848,7 @@ impl LocalsClone {
 
     /// Combines entries from `other` into `self`.
     ///
-    /// For each key not already present in `self`, moves the boxed value from `other`.
+    /// For each key not already present in `self`, clones the boxed value from `other`.
     ///
     /// # Examples
     ///
@@ -851,6 +858,7 @@ impl LocalsClone {
     /// let mut a = LocalsClone::default();
     /// a.set("x", 1);
     /// let mut b = LocalsClone::default();
+    /// b.set("x", 9); // colliding key — `a`'s value wins
     /// b.set("y", 2);
     /// a.combine(&b);
     /// assert_eq!(a.get::<i32>("x"), Some(&1));
@@ -862,23 +870,25 @@ impl LocalsClone {
         }
     } 
 
-    /// Merges entries from `other` into `self`. 
-    /// 
-    /// For each key not already present in `self`, replaces the value with the one from `other`. 
-    /// 
-    /// # Examples 
-    /// 
+    /// Merges entries from `other` into `self`.
+    ///
+    /// For each key, clones the boxed value from `other` and replaces any
+    /// existing entry in `self`.
+    ///
+    /// # Examples
+    ///
     /// ```rust
     /// use akari::extensions::LocalsClone;
     ///
     /// let mut a = LocalsClone::default();
     /// a.set("x", 1);
     /// let mut b = LocalsClone::default();
+    /// b.set("x", 9); // colliding key — `b`'s value wins
     /// b.set("y", 2);
     /// a.merge(&b);
-    /// assert_eq!(a.get::<i32>("x"), Some(&1));
+    /// assert_eq!(a.get::<i32>("x"), Some(&9));
     /// assert_eq!(a.get::<i32>("y"), Some(&2));
-    /// ``` 
+    /// ```
     pub fn merge(&mut self, other: &LocalsClone) {
         for (key, value) in &other.inner {
             // If the key is already present, we replace it with the new value
@@ -927,9 +937,9 @@ impl Default for LocalsClone {
 /// use std::collections::HashMap;
 /// use akari::extensions::combine_hashmap;
 ///
-/// let mut a: HashMap<String, i32> = HashMap::new();
+/// let mut a: HashMap<String, i32> = HashMap::default();
 /// a.insert("a".to_string(), 1);
-/// let mut b = HashMap::new();
+/// let mut b = HashMap::default();
 /// b.insert("b".to_string(), 2);
 /// b.insert("a".to_string(), 9);
 /// combine_hashmap(&mut a, &b);
@@ -950,7 +960,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+    use crate::hash::HashMap;
 
     // #[derive(Clone, Debug, PartialEq)]
     // struct User { id: u32, name: String }
@@ -1046,9 +1056,9 @@ mod tests {
 
     #[test]
     fn test_combine_hashmap() {
-        let mut a: HashMap<String, i32> = HashMap::new();
+        let mut a: HashMap<String, i32> = HashMap::default();
         a.insert("key1".to_string(), 1);
-        let mut b = HashMap::new();
+        let mut b = HashMap::default();
         b.insert("key2".to_string(), 2);
         b.insert("key1".to_string(), 9);
         combine_hashmap(&mut a, &b);

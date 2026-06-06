@@ -112,7 +112,7 @@ fn generate_code(expr: &ValueExpr) -> TokenStream2 {
             });
             
             quote! {{
-                let mut map = ::std::collections::HashMap::new();
+                let mut map = ::akari::hash::HashMap::default();
                 #(#entries)*
                 Value::Dict(map)
             }}

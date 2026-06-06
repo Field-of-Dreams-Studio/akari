@@ -1,6 +1,6 @@
 [package]
 name = "akari"
-version = "0.2.8"
+version = "0.2.8-rc1"
 edition = "2024" 
 authors = ["Redstone <redstone@fds.moe>"] 
 description = "Dynamic & Weakly Typed Programming Powered by Rust" 
@@ -10,22 +10,28 @@ license = "GPL-3.0-or-later"
 categories = ["data-structures", "parser-implementations", "template-engine", "encoding", "web-programming"]
 keywords = ["json", "parser", "template", "dynamic", "streaming"]  
 
-[features] 
-default = ["dynamic"] 
+[features]
+default = ["dynamic"]
 
-dynamic = [] 
-object_macro = ["dep:akari_macro"] 
+# Flavor flag: triggers `#![no_std]` and pulls `hashbrown` so the `hash`
+# module can source `HashMap` from it. Does not enable any other feature.
+no_std = ["dep:hashbrown"]
 
-extension = [] 
+# Capabilities
+hash = []
+dynamic = ["hash"]
+object_macro = ["dep:akari_macro", "dynamic"]
+extension = ["hash"]
+template = ["dynamic"]
 
-template = ["dynamic"] 
-
-bin = ["dynamic", "template"] 
+# Bundles
+bin = ["dynamic", "template"]
 full = ["dynamic", "object_macro", "extension", "template"]
 
 [[bin]] 
 name = "akari" 
 required-features = ["bin"]  
 
-[dependencies] 
-akari_macro = { version="0.2.1", path="../am", optional=true } 
+[dependencies]
+akari_macro = { version = "=0.3.0", path = "../am", optional = true }
+hashbrown = { version = "0.15", default-features = false, optional = true }

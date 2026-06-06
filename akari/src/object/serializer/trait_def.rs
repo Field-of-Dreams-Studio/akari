@@ -1,4 +1,5 @@
 use crate::object::Value;
+use super::BinWriter;
 
 pub trait ValueSerializer<O: ?Sized> {
     /// Serialization error type
@@ -12,8 +13,12 @@ pub trait ValueSerializer<O: ?Sized> {
     where
         Self: Sized;
 
-    /// Serialize a single Value directly to any writer.
-    fn serialize_to<W: std::io::Write + ?Sized>(value: &Value, writer: &mut W) -> Result<(), Self::Error>
+    /// Serialize a single Value into a caller-provided [`BinWriter`].
+    ///
+    /// Useful for reusing buffer allocations across multiple serializations.
+    /// To stream the result to an `io::Write` sink (file, socket), call
+    /// [`BinWriter::flush`] or [`BinWriter::write_to`] afterward.
+    fn serialize_buf(value: &Value, writer: &mut BinWriter) -> Result<(), Self::Error>
     where
         Self: Sized;
 }

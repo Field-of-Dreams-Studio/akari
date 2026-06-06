@@ -22,7 +22,7 @@
 //!
 //! `ValueSerializer<O>` intentionally stays minimal:
 //! - `serialize_one(&Value) -> Output` for owned one-shot serialization
-//! - `serialize_to(&Value, &mut impl Write)` for streaming to writers
+//! - `serialize_buf(&Value, &mut BinWriter)` for streaming into a reusable buffer
 //!
 //! This keeps parser/serializer APIs conceptually aligned while avoiding forced
 //! stateful serializer machinery where it is not needed.

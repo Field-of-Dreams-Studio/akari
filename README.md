@@ -7,12 +7,38 @@ https://fds.rs/akari/
 
 ---
 
-### **Core Components**
-| Component      | Feature Flag      | Description                                                                 |
-|----------------|-------------------|-----------------------------------------------------------------------------|
-| **Akari Value**| `dynamic` & `object_macro`   | JSON implementation with macros and file I/O                                |
-| **Extensions** | `extension`       | Type/string-based storage for middleware/app logic                          |
-| **Templating** | `template`        | HTML template engine with inheritance and caching                           |
+### **Feature Flags**
+
+**Capabilities** (additive; pick what you need)
+
+| Flag           | Pulls in    | What it adds                                                            |
+|----------------|-------------|-------------------------------------------------------------------------|
+| `hash`         | —           | `crate::hash::HashMap` alias (foundation used by `dynamic` / `extension`) |
+| `dynamic`      | `hash`      | The `Value` type, JSON parse/serialize, arithmetic operations           |
+| `object_macro` | `dynamic`   | `object! { … }` macro for ergonomic `Value` construction                |
+| `extension`    | `hash`      | `Params` / `Locals` — type- and string-keyed extension storage          |
+| `template`     | `dynamic`   | HTML template engine with inheritance and caching                       |
+
+**Bundles**
+
+| Flag      | Expands to                                              |
+|-----------|---------------------------------------------------------|
+| `bin`     | `dynamic` + `template` (required to build the CLI)      |
+| `full`    | `dynamic` + `object_macro` + `extension` + `template`   |
+
+**Default**: `dynamic` (transitively activates `hash`). Use `default-features = false` to opt out.
+
+---
+
+### **Build flavor — `no_std`**
+
+| Flag     | Effect                                                                                                                           |
+|----------|----------------------------------------------------------------------------------------------------------------------------------|
+| `no_std` | `#![no_std]` + `alloc`; routes `HashMap` through `hashbrown`; ships `FloatExt` polyfills (no `libm`). Incompatible with `template` / `bin`. |
+
+```toml
+akari = { version = "0.2.8-rc1", default-features = false, features = ["no_std", "dynamic"] }
+```
 
 ---
 
@@ -90,15 +116,16 @@ akari render_string "-[output var]-" var=42  # Output: 42
 Refer to `STYLE.md` for coding standards
 
 **Update Log Highlights:**
-| Version  | Key Changes                                      |
-|----------|-------------------------------------------------|
-| **0.2.7**| **ValueParser trait redesign with streaming support (final 0.2.x)** |
-| 0.2.6    | Documentation updates, full features enabled    |
-| 0.2.5    | Safer `into_json`, operator implementations     |
-| 0.2.4    | Added `is_<type>()` and `contains()` methods    |
-| 0.2.3    | Renamed types, separated value/template modules |
-| 0.2.2    | Template caching, `insert` keyword support      |
-| 0.1.3    | Critical empty HTML rendering fix               |
+| Version  | Key Changes                                       |
+|----------|---------------------------------------------------|
+| 0.2.8-rc1| `no_std` support, `IdHashMap*` aliases           |
+| 0.2.7    | ValueParser trait redesign with streaming support |
+| 0.2.6    | Documentation updates, full features enabled      |
+| 0.2.5    | Safer `into_json`, operator implementations       |
+| 0.2.4    | Added `is_<type>()` and `contains()` methods      |
+| 0.2.3    | Renamed types, separated value/template modules   |
+| 0.2.2    | Template caching, `insert` keyword support        |
+| 0.1.3    | Critical empty HTML rendering fix                 |
 
 > Full changelog available in source documentation
 

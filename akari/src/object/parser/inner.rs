@@ -1,3 +1,6 @@
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+
 /// Binary inner buffer - format-agnostic buffer and position management
 ///
 /// This struct provides low-level buffer management and byte navigation primitives

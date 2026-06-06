@@ -1,5 +1,12 @@
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
+use crate::hash::HashMap;
+use core::hash::{Hash, Hasher};
+
+pub mod float;
+
+#[cfg(not(feature = "no_std"))]
+use std::fs::{self, File};
 use super::parser::JsonParser;
 use super::error::ValueError; 
 
@@ -19,7 +26,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::new(42); 
     /// assert_eq!(obj, Value::Numerical(42.0)); 
     /// let obj = Value::new("hello"); 
@@ -28,18 +35,18 @@ impl Value {
     /// assert_eq!(obj, Value::Boolean(true)); 
     /// let obj = Value::new(vec![1, 2, 3]);
     /// assert_eq!(obj, Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])); 
-    /// let obj = Value::new(HashMap::from([("key", "value")])); 
-    /// assert_eq!(obj, Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
+    /// let obj = Value::new(HashMap::from_iter([("key", "value")])); 
+    /// assert_eq!(obj, Value::Dict(HashMap::from_iter([("key".to_string(), Value::Str("value".to_string()))]))); 
     /// ``` 
     /// 
     /// # Old grammar 
     /// ```rust
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::new(vec![Value::new(1), Value::new(2), Value::new(3)]);
     /// assert_eq!(obj, Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])); 
-    /// let obj = Value::new(HashMap::from([("key".to_string(), Value::Str("value".to_string()))])); 
-    /// assert_eq!(obj, Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))]))); 
+    /// let obj = Value::new(HashMap::from_iter([("key".to_string(), Value::Str("value".to_string()))])); 
+    /// assert_eq!(obj, Value::Dict(HashMap::from_iter([("key".to_string(), Value::Str("value".to_string()))]))); 
     /// ``` 
     pub fn new<T: Into<Value>>(value: T) -> Self {
         value.into()
@@ -100,11 +107,11 @@ impl Value {
     /// No parameters needed to be pass in 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// assert_eq!(Value::new_dict(), Value::Dict(HashMap::new())) 
+    /// use akari::hash::HashMap;
+    /// assert_eq!(Value::new_dict(), Value::Dict(HashMap::default()))
     /// ``` 
     pub fn new_dict() -> Self { 
-        return Self::Dict(HashMap::new()) 
+        return Self::Dict(HashMap::default())
     } 
 
     /// Converts the Value into a numerical value. 
@@ -208,8 +215,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let obj = Value::Dict(HashMap::from([("key".to_string(), Value::Str("value".to_string()))])); 
+    /// use akari::hash::HashMap;
+    /// let obj = Value::Dict(HashMap::from_iter([("key".to_string(), Value::Str("value".to_string()))])); 
     /// assert!(obj.is_dict()); 
     /// let obj = Value::Numerical(42.0); 
     /// assert!(!obj.is_dict()); 
@@ -293,8 +300,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let obj = Value::Dict(HashMap::from([ 
+    /// use akari::hash::HashMap;
+    /// let obj = Value::Dict(HashMap::from_iter([ 
     ///    ("key".to_string(), Value::Str("value".to_string())), 
     ///    ("number".to_string(), Value::Numerical(42.0)), 
     ///    ("list".to_string(), Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])), 
@@ -307,7 +314,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::Str("Hello, \"world\"! \\".to_string()); 
     /// let json = obj.into_json(); 
     /// println!("{}", json); // Output: "\"Hello, \\\"world\\\"! \\\"\"" 
@@ -319,58 +326,60 @@ impl Value {
         }
     } 
 
-    /// Converts the Value into a JSON string representation and writes it to a file. 
-    /// This function will return an error if the file cannot be written. 
-    /// # Example 
-    /// ```rust 
-    /// use akari::Value; 
-    /// 
+    /// Converts the Value into a JSON string representation and writes it to a file.
+    /// This function will return an error if the file cannot be written.
+    /// # Example
+    /// ```rust
+    /// # #[cfg(not(feature = "no_std"))] {
+    /// use akari::Value;
+    ///
     /// # #[cfg(feature = "object_macro")]
     /// # {
     /// use akari::object;
     /// // Write a JSON file using object macro
-    /// object!({ 
-    ///    key: "value", 
-    ///    number: 42, 
-    ///    list: [1, 2, 3], 
+    /// object!({
+    ///    key: "value",
+    ///    number: 42,
+    ///    list: [1, 2, 3],
     /// }).into_jsonf("test_temp/write_test.json").expect("Failed to write JSON file");
     /// # }
-    /// 
+    ///
     /// # #[cfg(not(feature = "object_macro"))]
     /// # {
     /// // Alternative approach without the object macro
-    /// use std::collections::HashMap;
-    /// let mut dict = HashMap::new();
+    /// use akari::hash::HashMap;
+    /// let mut dict = HashMap::default();
     /// dict.insert("key".to_string(), Value::Str("value".to_string()));
     /// dict.insert("number".to_string(), Value::Numerical(42.0));
-    /// 
+    ///
     /// let mut list = Vec::new();
     /// list.push(Value::Numerical(1.0));
     /// list.push(Value::Numerical(2.0));
     /// list.push(Value::Numerical(3.0));
     /// dict.insert("list".to_string(), Value::List(list));
-    /// 
+    ///
     /// Value::Dict(dict).into_jsonf("test_temp/write_test.json").expect("Failed to write JSON file");
     /// # }
-    /// ``` 
+    /// # }
+    /// ```
+    #[cfg(not(feature = "no_std"))]
     pub fn into_jsonf(&self, file_path: &str) -> Result<(), String> {
-        use std::fs::File;
         let mut file = File::create(file_path)
             .map_err(|e| format!("Failed to write JSON file: {}", e))?;
-        <super::JsonSerializer as super::ValueSerializer<str>>::serialize_to(self, &mut file)
+        super::JsonSerializer::serialize_to(self, &mut file)
             .map_err(|e| format!("Failed to write JSON file: {}", e))?;
         Ok(())
-    } 
+    }
     
     /// Parses a JSON string and returns an Value. 
     /// This function will return an error if the JSON is invalid or if there are extra characters after the JSON value. 
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let json = r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#; 
     /// let obj = Value::from_json(json).expect("Failed to parse JSON"); 
-    /// assert_eq!(obj, Value::Dict(HashMap::from([
+    /// assert_eq!(obj, Value::Dict(HashMap::from_iter([
     ///     ("key".to_string(), Value::Str("value".to_string())),
     ///     ("number".to_string(), Value::Numerical(42.0)),
     ///     ("list".to_string(), Value::List(vec![Value::Numerical(1.0), Value::Numerical(2.0), Value::Numerical(3.0)])), 
@@ -382,33 +391,34 @@ impl Value {
         JsonParser::parse_one(json).map_err(|e| e.to_string())
     } 
 
-    /// Parses a JSON file and returns an Value. 
-    /// This function will return an error if the file cannot be read or if the JSON is invalid. 
-    /// # Example 
-    /// ```rust 
-    /// use akari::Value; 
-    /// use std::fs; 
+    /// Parses a JSON file and returns an Value.
+    /// This function will return an error if the file cannot be read or if the JSON is invalid.
+    /// # Example
+    /// ```rust
+    /// # #[cfg(not(feature = "no_std"))] {
+    /// use akari::Value;
+    /// use std::fs;
     /// // Create a JSON file for testing
-    /// fs::write("test_temp/test_read.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap(); 
-    /// 
+    /// fs::write("test_temp/test_read.json", r#"{"key": "value", "number": 42, "list": [1, 2, 3]}"#).unwrap();
+    ///
     /// # #[cfg(feature = "object_macro")]
     /// # {
     /// use akari::object;
-    /// // Read the JSON file and parse it into an Value 
-    /// let obj = Value::from_jsonf("test_temp/test_read.json").expect("Failed to parse JSON file"); 
+    /// // Read the JSON file and parse it into an Value
+    /// let obj = Value::from_jsonf("test_temp/test_read.json").expect("Failed to parse JSON file");
     /// assert_eq!(obj, object!({
     ///    key: "value",
-    ///    number: 42, 
-    ///    list: [1, 2, 3], 
-    /// })); 
+    ///    number: 42,
+    ///    list: [1, 2, 3],
+    /// }));
     /// # }
-    /// 
+    ///
     /// # #[cfg(not(feature = "object_macro"))]
     /// # {
     /// // Alternative approach without the object macro
-    /// use std::collections::HashMap;
+    /// use akari::hash::HashMap;
     /// let obj = Value::from_jsonf("test_temp/test_read.json").expect("Failed to parse JSON file");
-    /// 
+    ///
     /// if let Value::Dict(map) = &obj {
     ///     assert_eq!(map.get("key"), Some(&Value::Str("value".to_string())));
     ///     assert_eq!(map.get("number"), Some(&Value::Numerical(42.0)));
@@ -424,9 +434,10 @@ impl Value {
     ///     panic!("Expected a Dict");
     /// }
     /// # }
-    /// ``` 
+    /// # }
+    /// ```
+    #[cfg(not(feature = "no_std"))]
     pub fn from_jsonf<T: AsRef<str>>(file_path: T) -> Result<Self, String> {
-        use std::fs;
         let content = fs::read_to_string(file_path.as_ref())
             .map_err(|e| format!("Failed to read JSON file: {}", e))?;
         Self::from_json(&content) 
@@ -498,8 +509,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
     /// let value = obj.get("key"); 
@@ -513,8 +524,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
     /// let default = Value::Str("default".to_string()); 
@@ -531,8 +542,8 @@ impl Value {
     /// ```rust 
     /// use akari::Value; 
     ///  
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
     /// let value = obj.try_get("key"); 
@@ -557,8 +568,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
     /// let value = obj.get_unchecked("key"); 
@@ -574,8 +585,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// let mut obj = Value::Dict(map); 
     /// obj.set("key".to_string(), Value::Str("new_value".to_string())); 
     /// let value = obj.get("key"); 
@@ -584,8 +595,8 @@ impl Value {
     /// 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let mut obj = Value::Dict(map); 
     /// obj.set("key".to_string(), Value::Str("new_value".to_string())); 
@@ -605,8 +616,8 @@ impl Value {
     /// # Example
     /// ```rust
     /// use akari::Value;
-    /// use std::collections::HashMap;
-    /// let mut map = HashMap::new();
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string()));
     /// let mut obj = Value::Dict(map);
     /// let value = obj.take("key");
@@ -620,8 +631,8 @@ impl Value {
     /// # Example
     /// ```rust
     /// use akari::Value;
-    /// use std::collections::HashMap;
-    /// let mut map = HashMap::new();
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string()));
     /// let mut obj = Value::Dict(map);
     /// let default = Value::Str("default".to_string());
@@ -639,8 +650,8 @@ impl Value {
     /// # Example
     /// ```rust
     /// use akari::Value;
-    /// use std::collections::HashMap;
-    /// let mut map = HashMap::new();
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string()));
     /// let mut obj = Value::Dict(map);
     /// let value = obj.try_take("key");
@@ -665,8 +676,8 @@ impl Value {
     /// # Example
     /// ```rust
     /// use akari::Value;
-    /// use std::collections::HashMap;
-    /// let mut map = HashMap::new();
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string()));
     /// let mut obj = Value::Dict(map);
     /// let value = obj.take_unchecked("key");
@@ -680,8 +691,8 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value;
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let mut obj = Value::Dict(map); 
     /// let value = obj.delete("key"); 
@@ -700,7 +711,7 @@ impl Value {
     /// # Example
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.idx(1); 
     /// assert_eq!(value, &Value::Str("value2".to_string())); 
@@ -714,7 +725,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let default = Value::Str("default".to_string()); 
     /// let value = list.idx_or(1, &default); 
@@ -729,7 +740,7 @@ impl Value {
     /// # Example 
     ///  ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// use akari::ValueError; 
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.try_idx(1); 
@@ -754,7 +765,7 @@ impl Value {
     /// # Example  
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.idx_unchecked(1); 
     /// assert_eq!(value, &Value::Str("value2".to_string())); 
@@ -779,7 +790,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// assert!(list.value_contains(&Value::Str("value1".to_string()))); 
     /// assert!(!list.value_contains(&Value::Str("value3".to_string()))); 
@@ -787,8 +798,8 @@ impl Value {
     /// 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
-    /// let mut map = HashMap::new(); 
+    /// use akari::hash::HashMap;
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Str("value".to_string())); 
     /// let obj = Value::Dict(map); 
     /// assert!(obj.value_contains(&Value::Str("value".to_string()))); 
@@ -797,7 +808,7 @@ impl Value {
     /// 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::Numerical(42.0); 
     /// assert!(obj.value_contains(&Value::Numerical(42.0))); 
     /// assert!(!obj.value_contains(&Value::Numerical(43.0))); 
@@ -805,7 +816,7 @@ impl Value {
     ///  
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::Boolean(true); 
     /// assert!(obj.value_contains(&Value::Boolean(true))); 
     /// assert!(!obj.value_contains(&Value::Boolean(false))); 
@@ -813,7 +824,7 @@ impl Value {
     ///  
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let obj = Value::Str("value".to_string()); 
     /// assert!(obj.value_contains(&Value::Str("value".to_string()))); 
     /// assert!(!obj.value_contains(&Value::Str("other_value".to_string()))); 
@@ -964,7 +975,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// list.push(Value::Str("new_value".to_string())); 
     /// let value = list.idx(2); 
@@ -981,7 +992,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.pop(); 
     /// assert_eq!(value, Some(Value::Str("value2".to_string()))); 
@@ -998,7 +1009,7 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let mut list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let value = list.remove(1); 
     /// assert_eq!(value, Some(Value::Str("value2".to_string()))); 
@@ -1019,11 +1030,11 @@ impl Value {
     /// # Example 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// let length = list.len(); 
     /// assert_eq!(length, 2); 
-    /// let dict = Value::Dict(HashMap::from([ 
+    /// let dict = Value::Dict(HashMap::from_iter([ 
     ///    ("key".to_string(), Value::Str("value".to_string())), 
     /// ])); 
     /// let length = dict.len(); 
@@ -1099,10 +1110,10 @@ impl Value {
     /// 
     /// ```rust 
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// let list = Value::List(vec![Value::Str("value1".to_string()), Value::Str("value2".to_string())]); 
     /// assert!(list.contains(&Value::Str("value1".to_string()))); 
-    /// let dict = Value::Dict(HashMap::from([ 
+    /// let dict = Value::Dict(HashMap::from_iter([ 
     ///    ("key1".to_string(), Value::Str("value1".to_string())), 
     ///   ("key2".to_string(), Value::Str("value2".to_string())),
     ///  ])); 
@@ -1198,8 +1209,8 @@ impl Value {
 
 }
 
-impl std::fmt::Display for Value { 
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Value {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", Value::format(self)) 
     }
 } 

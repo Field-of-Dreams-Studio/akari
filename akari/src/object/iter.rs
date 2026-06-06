@@ -1,3 +1,5 @@
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
 use super::value::Value;
 
 /// Key-Value Pair returned by iterators.
@@ -203,7 +205,7 @@ impl Iterator for IterOwned {
                     self.pos += 1; // Mark as done
                     Some(KVP::Owned {
                         key: Value::Numerical(0.0),
-                        value: std::mem::replace(&mut self.source, Value::None),
+                        value: core::mem::replace(&mut self.source, Value::None),
                     })
                 } else {
                     None
@@ -213,7 +215,7 @@ impl Iterator for IterOwned {
                 if self.pos < values.len() {
                     let key = Value::Numerical(self.pos as f64);
                     // Take ownership to avoid cloning
-                    let value = std::mem::replace(&mut values[self.pos], Value::None);
+                    let value = core::mem::replace(&mut values[self.pos], Value::None);
                     self.pos += 1;
                     Some(KVP::Owned { key, value })
                 } else {
@@ -280,9 +282,9 @@ impl Value {
     /// Iterating over a dictionary:
     /// ```
     /// use akari::Value;
-    /// use std::collections::HashMap;
+    /// use akari::hash::HashMap;
     ///
-    /// let mut map = HashMap::new();
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Boolean(true));
     /// let dict = Value::Dict(map);
     /// 
@@ -329,9 +331,9 @@ impl Value {
     /// Consuming a dictionary:
     /// ```
     /// use akari::Value; 
-    /// use std::collections::HashMap; 
+    /// use akari::hash::HashMap;
     /// 
-    /// let mut map = HashMap::new();
+    /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Boolean(true));
     /// let dict = Value::Dict(map);
     /// 

@@ -2,6 +2,8 @@
 //!
 //! Compact JSON serializer for Akari `Value`.
 
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
 use crate::object::Value;
 
 use super::error::SerializeError;
@@ -88,10 +90,31 @@ impl ValueSerializer<str> for JsonSerializer {
             .map_err(|e| SerializeError::message("serializer produced invalid UTF-8").with_context(e.to_string()))
     }
 
-    fn serialize_to<W: std::io::Write + ?Sized>(value: &Value, writer: &mut W) -> Result<(), Self::Error> {
-        let mut bin_writer = BinWriter::new();
-        Self::serialize_value(&mut bin_writer, value, 0)?;
-        std::io::Write::write_all(writer, bin_writer.as_bytes()).map_err(SerializeError::from)
+    fn serialize_buf(value: &Value, writer: &mut BinWriter) -> Result<(), Self::Error> {
+        Self::serialize_value(writer, value, 0)
+    }
+}
+
+/// Inherent `serialize_to<W: std::io::Write>` for direct streaming to any
+/// `io::Write` sink. Wraps the trait's [`serialize_buf`] in a temporary
+/// [`BinWriter`] and flushes once.
+///
+/// This is std-only by definition (no `io::Write` under `no_std`). Kept as an
+/// inherent method, separate from the trait, so it can have the
+/// 0.2.7-compatible `<W: std::io::Write + ?Sized>` signature without forcing
+/// that bound onto every `ValueSerializer` implementor.
+///
+/// [`serialize_buf`]: super::ValueSerializer::serialize_buf
+#[cfg(not(feature = "no_std"))]
+impl JsonSerializer {
+    pub fn serialize_to<W: std::io::Write + ?Sized>(
+        value: &Value,
+        writer: &mut W,
+    ) -> Result<(), SerializeError> {
+        let mut buf = BinWriter::new();
+        <Self as ValueSerializer<str>>::serialize_buf(value, &mut buf)?;
+        std::io::Write::write_all(writer, buf.as_bytes()).map_err(SerializeError::from_io_error)?;
+        Ok(())
     }
 }
 
@@ -229,11 +252,19 @@ mod tests {
     }
 
     #[test]
+    fn test_json_serialize_buf() {
+        let value = Value::Str("abc".to_string());
+        let mut out = BinWriter::new();
+        <JsonSerializer as ValueSerializer<str>>::serialize_buf(&value, &mut out).unwrap();
+        assert_eq!(out.as_bytes(), br#""abc""#);
+    }
+
+    #[test]
     fn test_json_serialize_to_writer() {
         let value = Value::Str("abc".to_string());
-        let mut out = Vec::new();
-        JsonSerializer::serialize_to(&value, &mut out).unwrap();
-        assert_eq!(out, br#""abc""#);
+        let mut sink: Vec<u8> = Vec::new();
+        JsonSerializer::serialize_to(&value, &mut sink).unwrap();
+        assert_eq!(sink, br#""abc""#);
     }
 
     #[test]

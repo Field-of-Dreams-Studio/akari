@@ -1,3 +1,5 @@
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
 use core::fmt;
 
 /// The category of a parse failure.
@@ -131,4 +133,4 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl std::error::Error for ParseError {}
+impl core::error::Error for ParseError {}

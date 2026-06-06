@@ -1,10 +1,13 @@
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
 use core::fmt;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 /// The category of a serialization failure.
 ///
 /// `SerializeErrorKind` is intentionally structured (instead of a free-form `String`) so callers
-/// can reliably distinguish conditions such as *I/O errors* vs *invalid values* vs *depth limits*,
+/// can reliably distinguish conditions such as *invalid values* vs *depth limits*,
 /// and implement robust error handling.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerializeErrorKind {
@@ -12,6 +15,12 @@ pub enum SerializeErrorKind {
     ///
     /// This wraps the `io::ErrorKind` since `io::Error` is not Clone.
     /// The original error message is preserved in the `SerializeError.context` field.
+    ///
+    // TODO(0.3.0): the BinWriter-based serializer pipeline no longer surfaces
+    // `io::Error` internally, so this variant is unreachable from the
+    // first-party serializers. Kept for backwards compatibility with
+    // downstream `match` arms compiled against 0.2.7. Plan to remove in 0.3.0.
+    #[cfg(not(feature = "no_std"))]
     IoError(io::ErrorKind),
 
     /// The Value contains data that cannot be serialized in the target format.
@@ -74,6 +83,8 @@ impl SerializeError {
     }
 
     /// Create an I/O error from an `io::Error`.
+    // TODO(0.3.0): remove together with the `IoError` variant.
+    #[cfg(not(feature = "no_std"))]
     pub fn from_io_error(err: io::Error) -> Self {
         Self {
             kind: SerializeErrorKind::IoError(err.kind()),
@@ -100,6 +111,7 @@ impl SerializeError {
 impl fmt::Display for SerializeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {
+            #[cfg(not(feature = "no_std"))]
             SerializeErrorKind::IoError(kind) => {
                 write!(f, "I/O error: {:?}", kind)?;
             }
@@ -125,8 +137,10 @@ impl fmt::Display for SerializeError {
     }
 }
 
-impl std::error::Error for SerializeError {}
+impl core::error::Error for SerializeError {}
 
+// TODO(0.3.0): remove together with the `IoError` variant.
+#[cfg(not(feature = "no_std"))]
 impl From<io::Error> for SerializeError {
     fn from(err: io::Error) -> Self {
         Self::from_io_error(err)
