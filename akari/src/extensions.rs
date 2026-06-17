@@ -48,11 +48,12 @@ impl Params {
     /// let mut req = Params::default();
     ///
     /// // Store authentication information
-    /// req.set(User { id: 123, name: "Alice".to_string() }); 
+    /// req.set(User { id: 123, name: "Alice".to_string() });
     /// ```
+    #[inline]
     pub fn set<T: 'static + Send + Sync>(&mut self, value: T) {
         self.inner.insert(TypeId::of::<T>(), Box::new(value));
-    } 
+    }
 
     /// Retrieves a reference to a value from the type-based params storage.
     /// Returns `None` if no value of this type has been stored.
@@ -76,11 +77,12 @@ impl Params {
     ///     println!("Unauthorized request"); 
     /// }
     /// ```
+    #[inline]
     pub fn get<T: 'static + Send + Sync>(&self) -> Option<&T> {
         self.inner
             .get(&TypeId::of::<T>())
             .and_then(|boxed| boxed.downcast_ref::<T>())
-    } 
+    }
 
     /// Retrieves a mutable reference to a value from the type-based params storage.
     /// Returns `None` if no value of this type has been stored.
@@ -99,11 +101,12 @@ impl Params {
     ///     *number += 1 
     /// }
     /// ```
+    #[inline]
     pub fn get_mut<T: 'static + Send + Sync>(&mut self) -> Option<&mut T> {
         self.inner
             .get_mut(&TypeId::of::<T>())
             .and_then(|boxed| boxed.downcast_mut::<T>())
-    } 
+    }
 
     /// Removes a value from the type-based params storage and returns it.
     /// Returns `None` if no value of this type has been stored.
@@ -122,6 +125,7 @@ impl Params {
     ///     drop(token) 
     /// }
     /// ```
+    #[inline]
     pub fn take<T: 'static + Send + Sync>(&mut self) -> Option<T> {
         self.inner
             .remove(&TypeId::of::<T>())
@@ -247,9 +251,10 @@ impl Locals {
     /// req.set("is_premium", true);
     /// req.set("cart_items", vec!["item1", "item2"]);
     /// ```
+    #[inline]
     pub fn set<T: 'static + Send + Sync>(&mut self, key: impl Into<String>, value: T) {
         self.inner.insert(key.into(), Box::new(value));
-    } 
+    }
 
     /// Retrieves a reference to a value from the string-based locals storage by key.
     /// Returns `None` if no value with this key exists or if the type doesn't match.
@@ -277,11 +282,12 @@ impl Locals {
     /// let user_id = req.get::<i32>("user_id");
     /// let items = req.get::<Vec<String>>("cart_items");
     /// ```
+    #[inline]
     pub fn get<T: 'static + Send + Sync>(&self, key: &str) -> Option<&T> {
         self.inner
             .get(key)
             .and_then(|boxed| boxed.downcast_ref::<T>())
-    } 
+    }
 
     /// Retrieves a mutable reference to a value from the string-based locals storage by key.
     /// Returns `None` if no value with this key exists or if the type doesn't match.
@@ -299,11 +305,12 @@ impl Locals {
     ///     items.push("new_item".to_string());
     /// }
     /// ```
+    #[inline]
     pub fn get_mut<T: 'static + Send + Sync>(&mut self, key: &str) -> Option<&mut T> {
         self.inner
             .get_mut(key)
             .and_then(|boxed| boxed.downcast_mut::<T>())
-    } 
+    }
 
     /// Removes a value from the string-based locals storage and returns it.
     /// Returns `None` if no value with this key exists or if the type doesn't match.
@@ -324,6 +331,7 @@ impl Locals {
     ///     drop(token) 
     /// }
     /// ```
+    #[inline]
     pub fn take<T: 'static + Send + Sync>(&mut self, key: &str) -> Option<T> {
         if let Some(boxed_any) = self.inner.get(key) {
             if boxed_any.downcast_ref::<T>().is_some() {
@@ -528,6 +536,7 @@ impl ParamsClone {
     /// // Store authentication information
     /// req.set(User { id: 123, name: "Alice".to_string() });
     /// ```
+    #[inline]
     pub fn set<T: ParamValue>(&mut self, value: T) {
         self.inner.insert(TypeId::of::<T>(), Box::new(value));
     }
@@ -551,6 +560,7 @@ impl ParamsClone {
     ///     println!("Unauthorized request"); 
     /// }
     /// ```
+    #[inline]
     pub fn get<T: 'static + Send + Sync>(&self) -> Option<&T> {
         self.inner
             .get(&TypeId::of::<T>())
@@ -573,6 +583,7 @@ impl ParamsClone {
     ///     *number += 1;
     /// }
     /// ```
+    #[inline]
     pub fn get_mut<T: 'static + Send + Sync>(&mut self) -> Option<&mut T> {
         self.inner
             .get_mut(&TypeId::of::<T>())
@@ -595,6 +606,7 @@ impl ParamsClone {
     ///     drop(token)
     /// }
     /// ```
+    #[inline]
     pub fn take<T: 'static + Send + Sync>(&mut self) -> Option<T> {
         self.inner
             .remove(&TypeId::of::<T>())
@@ -603,7 +615,7 @@ impl ParamsClone {
                 any_box.downcast().ok()
             })
             .map(|boxed| *boxed)
-    } 
+    }
 
     /// Combines entries from `other` into `self`.
     ///
@@ -621,12 +633,15 @@ impl ParamsClone {
     /// a.combine(&b);
     /// assert_eq!(a.get::<u8>(), Some(&1u8));
     /// ```
+    #[inline]
     pub fn combine(&mut self, other: &Self) {
         for (ty, value) in &other.inner {
-            self.inner.entry(*ty).or_insert((**value).clone_box());
+            // `or_insert_with` defers `clone_box()` until we know the entry
+            // is vacant — `or_insert` would eagerly clone and discard.
+            self.inner.entry(*ty).or_insert_with(|| (**value).clone_box());
         }
-    } 
-    
+    }
+
     /// Merges entries from `other` into `self`.
     ///
     /// For each type, clones the boxed value from `other` and replaces any
@@ -653,12 +668,19 @@ impl ParamsClone {
 } 
 
 impl Clone for ParamsClone {
-    fn clone(&self) -> Self { 
-        let mut output = ParamsClone::default(); 
-        output.combine(self); 
-        output 
+    #[inline]
+    fn clone(&self) -> Self {
+        // Bypass `combine()` — its `entry()` probing is wasted work when the
+        // target map is empty (as it is here). Pre-size to avoid resizing
+        // during the inserts, then go straight to `insert`.
+        let mut inner = IdHashMapTypeId::<Box<dyn ParamValue>>::default();
+        inner.reserve(self.inner.len());
+        for (ty, value) in &self.inner {
+            inner.insert(*ty, (**value).clone_box());
+        }
+        ParamsClone { inner }
     }
-} 
+}
 
 impl fmt::Display for ParamsClone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -718,6 +740,7 @@ impl LocalsClone {
     /// req.set("is_premium", true);
     /// req.set("cart_items", vec!["item1", "item2"]);
     /// ```
+    #[inline]
     pub fn set<T: ParamValue>(&mut self, key: impl Into<String>, value: T) {
         self.inner.insert(key.into(), Box::new(value));
     }
@@ -748,6 +771,7 @@ impl LocalsClone {
     /// let user_id = req.get::<i32>("user_id");
     /// let items = req.get::<Vec<String>>("cart_items");
     /// ```
+    #[inline]
     pub fn get<T: ParamValue>(&self, key: &str) -> Option<&T> {
         self.inner
             .get(key)
@@ -770,6 +794,7 @@ impl LocalsClone {
     ///     items.push("new_item".to_string());
     /// }
     /// ```
+    #[inline]
     pub fn get_mut<T: ParamValue>(&mut self, key: &str) -> Option<&mut T> {
         self.inner
             .get_mut(key)
@@ -795,7 +820,8 @@ impl LocalsClone {
     ///     drop(token)
     /// }
     /// ```
-    pub fn take<T: ParamValue + Clone>(&mut self, key: &str) -> Option<T> { 
+    #[inline]
+    pub fn take<T: ParamValue + Clone>(&mut self, key: &str) -> Option<T> {
         if let Some(val) = self.get::<T>(key) {
             // Clone the stored value…
             let cloned = (*val).clone();
@@ -864,11 +890,16 @@ impl LocalsClone {
     /// assert_eq!(a.get::<i32>("x"), Some(&1));
     /// assert_eq!(a.get::<i32>("y"), Some(&2));
     /// ```
+    #[inline]
     pub fn combine(&mut self, other: &LocalsClone) {
         for (key, value) in &other.inner {
-            self.inner.entry((*key).clone()).or_insert((**value).clone_box());
+            // `or_insert_with` defers `clone_box()` until we know the entry
+            // is vacant — `or_insert` would eagerly clone and discard.
+            self.inner
+                .entry(key.clone())
+                .or_insert_with(|| (**value).clone_box());
         }
-    } 
+    }
 
     /// Merges entries from `other` into `self`.
     ///
@@ -898,12 +929,22 @@ impl LocalsClone {
 } 
 
 impl Clone for LocalsClone {
-    fn clone(&self) -> Self { 
-        let mut output = LocalsClone::default(); 
-        output.combine(self); 
-        output 
+    #[inline]
+    fn clone(&self) -> Self {
+        // Bypass `combine()` — its `entry()` probing is wasted work when the
+        // target map is empty (as it is here). Pre-size to avoid resizing
+        // during the inserts, then go straight to `insert`.
+        // (`default()` + `reserve()` rather than `with_capacity()` so this
+        //  compiles against both std `HashMap` and `hashbrown::HashMap`,
+        //  the latter of which only exposes `with_capacity_and_hasher`.)
+        let mut inner: HashMap<String, Box<dyn ParamValue>> = HashMap::default();
+        inner.reserve(self.inner.len());
+        for (key, value) in &self.inner {
+            inner.insert(key.clone(), (**value).clone_box());
+        }
+        LocalsClone { inner }
     }
-}  
+}
 
 impl fmt::Display for LocalsClone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

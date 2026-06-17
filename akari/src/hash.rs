@@ -65,58 +65,131 @@ pub use std::collections::HashMap;
 #[cfg(feature = "no_std")]
 pub type HashMap<K, V> = hashbrown::HashMap<K, V, FxBuildHasher>;
 
-/// Identity hasher backed by `u128` storage, so every typed `write_*`
-/// method is a single widening assignment.
+/// Identity hasher backed by `u128` storage.
+///
+/// Each typed `write_*` method is responsible for spreading its input
+/// across the full 64-bit hash space at *write time*, where the input
+/// width is known. [`finish`](IdHasher::finish) then just truncates the
+/// storage to `u64` — no further mixing.
 ///
 /// Pair with [`IdBuildHasher`] and one of the `IdHashMap*` aliases below.
 ///
-/// # When to use
+/// # Why bit-spreading lives in `write_*`, not `finish`
 ///
-/// - [`TypeId`](core::any::TypeId) keys (uniform across the full width).
-/// - Unsigned integer keys.
-/// - Signed keys known to stay non-negative.
+/// `Hasher::finish` is type-erased — it doesn't know whether the input
+/// was a `u8` or a `u128`. Hashbrown needs entropy across the full
+/// `u64` return: low bits select the bucket index, high seven bits
+/// select the SIMD control byte. A naive truncation `self.0 as u64`
+/// leaves the high half of the output zero for any narrow input
+/// (u8/u16/u32), causing every entry's control byte to collapse to 0
+/// and the SIMD probe to degenerate into a linear scan. Putting the
+/// spreading at the typed `write_*` boundary is the cleanest fix:
+/// each method knows its own width and applies the right broadcast.
 ///
-/// Avoid wide-range signed keys — see [`IdHasher::finish`] for the reason.
+/// # Injectivity
+///
+/// `write_u8`, `write_u16`, `write_u32`, and `write_u64` are
+/// **injective** — distinct inputs produce distinct stored values:
+///
+/// - `write_u8(n)` stores `n × 0x0101_0101_0101_0101`, broadcasting the
+///   byte into all 8 lanes without inter-lane carries (since `n < 256`).
+///   Byte 0 of the result equals `n` exactly.
+/// - `write_u16(n)` stores `n × 0x0001_0001_0001_0001`, broadcasting
+///   into all 4 u16 lanes without carries (since `n < 2¹⁶`). Bits
+///   `[0..16)` of the result equal `n` exactly.
+/// - `write_u32(n)` stores `(n as u64) | ((n as u64) << 32)`, placing
+///   `n` in both halves of the u64. Bits `[0..32)` equal `n` exactly.
+/// - `write_u64(n)` stores `n` unchanged.
+///
+/// `write_u128` is **necessarily lossy** (u128 → u64 has 2⁶⁴ × the
+/// codomain size of the domain). The implementation XOR-folds the two
+/// u64 halves, a balanced compression where each output value has
+/// exactly 2⁶⁴ preimages distributed uniformly. For `TypeId` and
+/// other entropy-spanning u128 inputs the collision rate is the
+/// birthday-baseline 2⁻⁶⁴ per pair; for adversary-chosen u128 keys
+/// collisions are trivially constructable (`hi = lo ⊕ target`), which
+/// is why `IdHasher` is *not* DoS-resistant by design.
+///
+/// Signed variants `write_i*` delegate to their unsigned counterparts
+/// via bitwise `as`-cast, preserving the bit pattern.
 #[derive(Default, Clone, Debug)]
 pub struct IdHasher(u128);
 
 impl Hasher for IdHasher {
-    /// XOR-folds the `u128` storage into a `u64`, then byte-reverses.
-    ///
-    /// The reverse moves the value's low-bit entropy into the high bits
-    /// where hashbrown extracts its SIMD control byte. Without it,
-    /// identity-hashing small ints degrades sharply on large tables —
-    /// every entry's control byte would end up zero.
-    ///
-    /// # Signed-key collisions
-    ///
-    /// The XOR-fold treats sign extension as noise: for any signed key
-    /// `n` shorter than 128 bits, `n` and `!n` produce the same hash —
-    /// `i32::MAX` collides with `i32::MIN`, `i64::MAX` with `i64::MIN`,
-    /// and so on.
+    /// Truncate the `u128` storage to `u64`. All entropy distribution
+    /// has already been performed by the typed `write_*` method that
+    /// produced the storage value — see the type-level docstring.
     #[inline]
     fn finish(&self) -> u64 {
-        ((self.0 as u64) ^ ((self.0 >> 64) as u64)).swap_bytes()
+        self.0 as u64
     }
 
-    #[inline] fn write_u8   (&mut self, n: u8)    { self.0 = n as u128; }
-    #[inline] fn write_u16  (&mut self, n: u16)   { self.0 = n as u128; }
-    #[inline] fn write_u32  (&mut self, n: u32)   { self.0 = n as u128; }
-    #[inline] fn write_u64  (&mut self, n: u64)   { self.0 = n as u128; }
-    #[inline] fn write_u128 (&mut self, n: u128)  { self.0 = n; }
-    #[inline] fn write_usize(&mut self, n: usize) { self.0 = n as u128; }
+    // ----- Unsigned widths: each spreads its input across full u64. -----
 
-    #[inline] fn write_i8   (&mut self, n: i8)    { self.0 = (n as i128) as u128; }
-    #[inline] fn write_i16  (&mut self, n: i16)   { self.0 = (n as i128) as u128; }
-    #[inline] fn write_i32  (&mut self, n: i32)   { self.0 = (n as i128) as u128; }
-    #[inline] fn write_i64  (&mut self, n: i64)   { self.0 = (n as i128) as u128; }
-    #[inline] fn write_i128 (&mut self, n: i128)  { self.0 = n as u128; }
-    #[inline] fn write_isize(&mut self, n: isize) { self.0 = (n as i128) as u128; }
+    #[inline]
+    fn write_u8(&mut self, n: u8) {
+        // Broadcast n into all 8 byte lanes: 0x_NN_NN_NN_NN_NN_NN_NN_NN.
+        self.0 = ((n as u64).wrapping_mul(0x0101_0101_0101_0101)) as u128;
+    }
+
+    #[inline]
+    fn write_u16(&mut self, n: u16) {
+        // Broadcast n into all 4 u16 lanes: 0x_NNNN_NNNN_NNNN_NNNN.
+        self.0 = ((n as u64).wrapping_mul(0x0001_0001_0001_0001)) as u128;
+    }
+
+    #[inline]
+    fn write_u32(&mut self, n: u32) {
+        // Duplicate n into both halves: 0x_NNNN_NNNN_NNNN_NNNN.
+        let x = n as u64;
+        self.0 = ((x << 32) | x) as u128;
+    }
+
+    #[inline]
+    fn write_u64(&mut self, n: u64) {
+        // n already has entropy across all 64 bits; store as-is.
+        self.0 = n as u128;
+    }
+
+    #[inline]
+    fn write_u128(&mut self, n: u128) {
+        // Necessarily lossy: XOR-fold the two halves into u64.
+        let hi = (n >> 64) as u64;
+        let lo = n as u64;
+        self.0 = (hi ^ lo) as u128;
+    }
+
+    #[inline]
+    fn write_usize(&mut self, n: usize) {
+        // Use the matching-width unsigned spread for the target platform.
+        #[cfg(target_pointer_width = "64")]
+        self.write_u64(n as u64);
+        #[cfg(target_pointer_width = "32")]
+        self.write_u32(n as u32);
+        #[cfg(target_pointer_width = "16")]
+        self.write_u16(n as u16);
+    }
+
+    // ----- Signed widths: bit-cast to unsigned, then spread. -----
+
+    #[inline] fn write_i8   (&mut self, n: i8)    { self.write_u8(n as u8);     }
+    #[inline] fn write_i16  (&mut self, n: i16)   { self.write_u16(n as u16);   }
+    #[inline] fn write_i32  (&mut self, n: i32)   { self.write_u32(n as u32);   }
+    #[inline] fn write_i64  (&mut self, n: i64)   { self.write_u64(n as u64);   }
+    #[inline] fn write_i128 (&mut self, n: i128)  { self.write_u128(n as u128); }
+    #[inline] fn write_isize(&mut self, n: isize) {
+        #[cfg(target_pointer_width = "64")]
+        self.write_u64(n as u64);
+        #[cfg(target_pointer_width = "32")]
+        self.write_u32(n as u32);
+        #[cfg(target_pointer_width = "16")]
+        self.write_u16(n as u16);
+    }
 
     /// Defensive byte-fold for `Hash` impls that bypass the typed
-    /// `write_*` methods. Well-defined but not a good distribution; the
-    /// `TypeId` and integer keys this hasher targets hit the typed fast
-    /// paths.
+    /// `write_*` methods. Well-defined but not a good distribution;
+    /// the `TypeId` and integer keys this hasher targets hit the typed
+    /// fast paths and never reach this branch.
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         for &b in bytes {
