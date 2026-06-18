@@ -499,7 +499,23 @@ where
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
-} 
+}
+
+/// `Clone for Box<dyn ParamValue>` — bridges the existing `clone_box`
+/// method into the `Clone` trait. Once this impl is in scope,
+/// `HashMap<K, Box<dyn ParamValue>>` satisfies `Clone` (because its `V`
+/// is now `Clone`), so the two `ParamsClone` / `LocalsClone` `Clone`
+/// impls can delegate to `HashMap::clone` directly. The std/hashbrown
+/// `HashMap::clone` walks the underlying `RawTable` in one structural
+/// sweep — meaningfully faster than rebuild-via-`insert()`.
+///
+/// Legal under the orphan rules because `dyn ParamValue` is local.
+impl Clone for Box<dyn ParamValue> {
+    #[inline]
+    fn clone(&self) -> Self {
+        (**self).clone_box()
+    }
+}
 
 /// Type-based extension storage, typically used by middleware.
 ///
@@ -670,15 +686,12 @@ impl ParamsClone {
 impl Clone for ParamsClone {
     #[inline]
     fn clone(&self) -> Self {
-        // Bypass `combine()` — its `entry()` probing is wasted work when the
-        // target map is empty (as it is here). Pre-size to avoid resizing
-        // during the inserts, then go straight to `insert`.
-        let mut inner = IdHashMapTypeId::<Box<dyn ParamValue>>::default();
-        inner.reserve(self.inner.len());
-        for (ty, value) in &self.inner {
-            inner.insert(*ty, (**value).clone_box());
-        }
-        ParamsClone { inner }
+        // Delegates to the underlying HashMap's `Clone` impl, which copies
+        // the `RawTable` buckets structurally and clones each value via
+        // `<Box<dyn ParamValue> as Clone>::clone` (defined just above the
+        // ParamsClone struct). Faster than rebuild-via-`insert()` because
+        // it skips per-entry hash-and-probe and load-factor bookkeeping.
+        ParamsClone { inner: self.inner.clone() }
     }
 }
 
@@ -795,10 +808,10 @@ impl LocalsClone {
     /// }
     /// ```
     #[inline]
-    pub fn get_mut<T: ParamValue>(&mut self, key: &str) -> Option<&mut T> {
+    pub fn get_mut<T: ParamValue>(&mut self, key: &str) -> Option<&mut T> { 
         self.inner
             .get_mut(key)
-            .and_then(|boxed| boxed.as_any_mut().downcast_mut::<T>())
+            .and_then(|boxed| (&mut **boxed as &mut dyn Any).downcast_mut::<T>())
     }
 
     /// Removes a value from the string-based locals storage and returns it.
@@ -931,18 +944,9 @@ impl LocalsClone {
 impl Clone for LocalsClone {
     #[inline]
     fn clone(&self) -> Self {
-        // Bypass `combine()` — its `entry()` probing is wasted work when the
-        // target map is empty (as it is here). Pre-size to avoid resizing
-        // during the inserts, then go straight to `insert`.
-        // (`default()` + `reserve()` rather than `with_capacity()` so this
-        //  compiles against both std `HashMap` and `hashbrown::HashMap`,
-        //  the latter of which only exposes `with_capacity_and_hasher`.)
-        let mut inner: HashMap<String, Box<dyn ParamValue>> = HashMap::default();
-        inner.reserve(self.inner.len());
-        for (key, value) in &self.inner {
-            inner.insert(key.clone(), (**value).clone_box());
-        }
-        LocalsClone { inner }
+        // Delegates to the underlying HashMap's `Clone` impl — see the
+        // ParamsClone counterpart above for the rationale.
+        LocalsClone { inner: self.inner.clone() }
     }
 }
 
@@ -1008,9 +1012,16 @@ mod tests {
 
     #[test]
     fn test_param_value_clone_box_and_as_any() {
+        // Use the trait-object cast (`&*boxed as &dyn Any`) rather than
+        // `boxed.as_any()` — see the rationale on `LocalsClone::get_mut`.
+        // Since `Box<dyn ParamValue>: Clone`, it satisfies the blanket
+        // `impl<T: …> ParamValue for T`, and `boxed.as_any()` would resolve
+        // to the Box's own `as_any` (returning the Box itself cast to
+        // `&dyn Any`). The explicit `&*boxed` first dereferences to the
+        // inner `dyn ParamValue`, then upcasts to `&dyn Any`.
         let x = 42u8;
         let boxed: Box<dyn ParamValue> = x.clone_box();
-        let y = boxed.as_any().downcast_ref::<u8>().unwrap();
+        let y = (&*boxed as &dyn Any).downcast_ref::<u8>().unwrap();
         assert_eq!(*y, 42u8);
     }
 
