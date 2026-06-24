@@ -37,7 +37,7 @@ https://fds.rs/akari/
 | `no_std` | `#![no_std]` + `alloc`; routes `HashMap` through `hashbrown`; ships `FloatExt` polyfills (no `libm`). Incompatible with `template` / `bin`. |
 
 ```toml
-akari = { version = "0.2.8-rc1", default-features = false, features = ["no_std", "dynamic"] }
+akari = { version = "0.2.8", default-features = false, features = ["no_std", "dynamic"] }
 ```
 
 ---
@@ -118,7 +118,7 @@ Refer to `STYLE.md` for coding standards
 **Update Log Highlights:**
 | Version  | Key Changes                                       |
 |----------|---------------------------------------------------|
-| 0.2.8-rc1| `no_std` support, `IdHashMap*` aliases           |
+| 0.2.8    | `no_std` support, `IdHashMap*` aliases.           |
 | 0.2.7    | ValueParser trait redesign with streaming support |
 | 0.2.6    | Documentation updates, full features enabled      |
 | 0.2.5    | Safer `into_json`, operator implementations       |
@@ -131,4 +131,4 @@ Refer to `STYLE.md` for coding standards
 
 ---
 
-**Security Note:** Always validate untrusted JSON input and template variables in production environments.
+**Security Note:** Always validate untrusted JSON input and template variables in production environments. 

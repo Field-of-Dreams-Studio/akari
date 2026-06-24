@@ -1,3 +1,5 @@
+0.2.8: IdHasher signed-key collision fixed (write-time entropy spread); `ValueSerializer::serialize_to` renamed `serialize_buf` (breaking — now takes `&mut BinWriter`)
+
 0.2.8-rc1 (extra 0.2.x release): no_std support; `IdHashMap*` aliases for TypeId/int keys; `FloatExt` polyfills for f64; serializer via `BinWriter`; `Value::insert` realigned with `Vec::insert`
 
 0.2.7: ValueParser trait redesigned with streaming support (create, append, fparse, pparse), final 0.2.x release

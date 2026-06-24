@@ -26,9 +26,22 @@ pub trait FloatExt {
 
     /// `self^exp` for general `f64` exponent.
     ///
-    /// In std this is `f64::powf`. In no_std, integer-valued exponents are
-    /// routed to [`FloatExt::powi2`]; non-integer exponents currently
-    /// return `f64::NAN` — see the TODO below for the real implementation.
+    /// In std this delegates to [`f64::powf`].
+    ///
+    /// # TODO — `no_std` is a placeholder
+    ///
+    /// `core` has no transcendentals. Until akari grows a real `powf`
+    /// (Taylor / Padé inline, or opt-in `libm`), this rounds `exp` to
+    /// the nearest integer and routes through [`FloatExt::powi2`]:
+    ///
+    /// - Integer exponents (`2.0.powf2(3.0)`) — exact.
+    /// - Nearly-integer exponents (`2.0.powf2(3.0001)`) — exact for the
+    ///   intended power.
+    /// - Genuinely fractional exponents — **silently lossy**:
+    ///   `2.0.powf2(0.5)` returns `2.0`, not `√2`.
+    ///
+    /// Gate on `exp.fract2() == 0.0` upstream and surface an error if
+    /// your `no_std` workload computes non-integer powers.
     fn powf2(&self, exp: f64) -> f64;
 }
 

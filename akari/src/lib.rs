@@ -5,7 +5,7 @@ extern crate alloc;
 /// Re-exports of `alloc` essentials for `no_std` builds. In `std` mode these
 /// are already in the prelude, so the module is omitted entirely.
 #[cfg(feature = "no_std")]
-pub(crate) mod prelude {
+pub mod prelude {
     // pub use alloc::borrow::ToOwned; // currently unused; re-enable if any module starts calling `.to_owned()`
     pub use alloc::boxed::Box;
     pub use alloc::format;
