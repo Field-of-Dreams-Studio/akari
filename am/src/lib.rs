@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, Token, Ident, braced, bracketed};
-use syn::parse::{Parse, ParseStream, Result};
 use proc_macro2::TokenStream as TokenStream2;
+use quote::quote;
+use syn::parse::{Parse, ParseStream, Result};
+use syn::{Ident, Token, braced, bracketed, parse_macro_input};
 
 /// A macro to create an Value from a literal or expression.
-/// It can handle dictionaries, lists, booleans, strings, and numeric values. 
+/// It can handle dictionaries, lists, booleans, strings, and numeric values.
 #[proc_macro]
 pub fn object(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as ValueExpr);
@@ -34,25 +34,25 @@ impl Parse for Dict {
         let content;
         braced!(content in input);
         let mut entries = Vec::new();
-        
+
         while !content.is_empty() {
             let key: Ident = content.parse()?;
             content.parse::<Token![:]>()?;
             let value: ValueExpr = content.parse()?;
-            
+
             entries.push((key.to_string(), value));
-            
+
             if content.is_empty() {
                 break;
             }
-            
+
             if content.peek(Token![,]) {
                 content.parse::<Token![,]>()?;
             } else {
                 break;
             }
         }
-        
+
         Ok(Dict { entries })
     }
 }
@@ -63,22 +63,22 @@ impl Parse for List {
         let content;
         bracketed!(content in input);
         let mut items = Vec::new();
-        
+
         while !content.is_empty() {
             let item: ValueExpr = content.parse()?;
             items.push(item);
-            
+
             if content.is_empty() {
                 break;
             }
-            
+
             if content.peek(Token![,]) {
                 content.parse::<Token![,]>()?;
             } else {
                 break;
             }
         }
-        
+
         Ok(List { items })
     }
 }
@@ -101,7 +101,7 @@ impl Parse for ValueExpr {
 }
 
 // Generate code for each type of ValueExpr
-fn generate_code(expr: &ValueExpr) -> TokenStream2 { 
+fn generate_code(expr: &ValueExpr) -> TokenStream2 {
     match expr {
         ValueExpr::Dict(dict) => {
             let entries = dict.entries.iter().map(|(key, value)| {
@@ -110,13 +110,13 @@ fn generate_code(expr: &ValueExpr) -> TokenStream2 {
                     map.insert(#key.to_string(), #value_code);
                 }
             });
-            
+
             quote! {{
                 let mut map = ::akari::hash::HashMap::default();
                 #(#entries)*
                 Value::Dict(map)
             }}
-        },
+        }
         ValueExpr::List(list) => {
             let items = list.items.iter().map(|item| {
                 let item_code = generate_code(item);
@@ -124,33 +124,29 @@ fn generate_code(expr: &ValueExpr) -> TokenStream2 {
                     vec.push(#item_code);
                 }
             });
-            
+
             quote! {{
                 let mut vec = Vec::new();
                 #(#items)*
                 Value::List(vec)
             }}
-        },
-        ValueExpr::Other(expr) => {
-            match expr {
-                syn::Expr::Lit(lit_expr) => {
-                    match &lit_expr.lit {
-                        syn::Lit::Bool(b) => {
-                            let value = b.value;
-                            quote! { Value::new(#value) }
-                        },
-                        syn::Lit::Str(s) => {
-                            let value = &s.value();
-                            quote! { Value::new(#value) }
-                        },
-                        syn::Lit::Int(_) | syn::Lit::Float(_) => {
-                            quote! { Value::new(#expr) }
-                        },
-                        _ => quote! { Value::new(#expr) }
-                    }
-                },
-                _ => quote! { Value::new(#expr) }
-            }
+        }
+        ValueExpr::Other(expr) => match expr {
+            syn::Expr::Lit(lit_expr) => match &lit_expr.lit {
+                syn::Lit::Bool(b) => {
+                    let value = b.value;
+                    quote! { Value::new(#value) }
+                }
+                syn::Lit::Str(s) => {
+                    let value = &s.value();
+                    quote! { Value::new(#value) }
+                }
+                syn::Lit::Int(_) | syn::Lit::Float(_) => {
+                    quote! { Value::new(#expr) }
+                }
+                _ => quote! { Value::new(#expr) },
+            },
+            _ => quote! { Value::new(#expr) },
         },
     }
-} 
+}

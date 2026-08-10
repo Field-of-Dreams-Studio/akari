@@ -172,12 +172,28 @@ impl Hasher for IdHasher {
 
     // ----- Signed widths: bit-cast to unsigned, then spread. -----
 
-    #[inline] fn write_i8   (&mut self, n: i8)    { self.write_u8(n as u8);     }
-    #[inline] fn write_i16  (&mut self, n: i16)   { self.write_u16(n as u16);   }
-    #[inline] fn write_i32  (&mut self, n: i32)   { self.write_u32(n as u32);   }
-    #[inline] fn write_i64  (&mut self, n: i64)   { self.write_u64(n as u64);   }
-    #[inline] fn write_i128 (&mut self, n: i128)  { self.write_u128(n as u128); }
-    #[inline] fn write_isize(&mut self, n: isize) {
+    #[inline]
+    fn write_i8(&mut self, n: i8) {
+        self.write_u8(n as u8);
+    }
+    #[inline]
+    fn write_i16(&mut self, n: i16) {
+        self.write_u16(n as u16);
+    }
+    #[inline]
+    fn write_i32(&mut self, n: i32) {
+        self.write_u32(n as u32);
+    }
+    #[inline]
+    fn write_i64(&mut self, n: i64) {
+        self.write_u64(n as u64);
+    }
+    #[inline]
+    fn write_i128(&mut self, n: i128) {
+        self.write_u128(n as u128);
+    }
+    #[inline]
+    fn write_isize(&mut self, n: isize) {
         #[cfg(target_pointer_width = "64")]
         self.write_u64(n as u64);
         #[cfg(target_pointer_width = "32")]
@@ -209,18 +225,18 @@ mod id_map_aliases {
     use super::IdBuildHasher;
     use core::any::TypeId;
     use std::collections::HashMap;
-    pub type IdHashMapU8    <V> = HashMap<u8,     V, IdBuildHasher>;
-    pub type IdHashMapU16   <V> = HashMap<u16,    V, IdBuildHasher>;
-    pub type IdHashMapU32   <V> = HashMap<u32,    V, IdBuildHasher>;
-    pub type IdHashMapU64   <V> = HashMap<u64,    V, IdBuildHasher>;
-    pub type IdHashMapU128  <V> = HashMap<u128,   V, IdBuildHasher>;
-    pub type IdHashMapI8    <V> = HashMap<i8,     V, IdBuildHasher>;
-    pub type IdHashMapI16   <V> = HashMap<i16,    V, IdBuildHasher>;
-    pub type IdHashMapI32   <V> = HashMap<i32,    V, IdBuildHasher>;
-    pub type IdHashMapI64   <V> = HashMap<i64,    V, IdBuildHasher>;
-    pub type IdHashMapI128  <V> = HashMap<i128,   V, IdBuildHasher>;
-    pub type IdHashMapUsize <V> = HashMap<usize,  V, IdBuildHasher>;
-    pub type IdHashMapIsize <V> = HashMap<isize,  V, IdBuildHasher>;
+    pub type IdHashMapU8<V> = HashMap<u8, V, IdBuildHasher>;
+    pub type IdHashMapU16<V> = HashMap<u16, V, IdBuildHasher>;
+    pub type IdHashMapU32<V> = HashMap<u32, V, IdBuildHasher>;
+    pub type IdHashMapU64<V> = HashMap<u64, V, IdBuildHasher>;
+    pub type IdHashMapU128<V> = HashMap<u128, V, IdBuildHasher>;
+    pub type IdHashMapI8<V> = HashMap<i8, V, IdBuildHasher>;
+    pub type IdHashMapI16<V> = HashMap<i16, V, IdBuildHasher>;
+    pub type IdHashMapI32<V> = HashMap<i32, V, IdBuildHasher>;
+    pub type IdHashMapI64<V> = HashMap<i64, V, IdBuildHasher>;
+    pub type IdHashMapI128<V> = HashMap<i128, V, IdBuildHasher>;
+    pub type IdHashMapUsize<V> = HashMap<usize, V, IdBuildHasher>;
+    pub type IdHashMapIsize<V> = HashMap<isize, V, IdBuildHasher>;
     pub type IdHashMapTypeId<V> = HashMap<TypeId, V, IdBuildHasher>;
 }
 
@@ -229,18 +245,18 @@ mod id_map_aliases {
     use super::IdBuildHasher;
     use core::any::TypeId;
     use hashbrown::HashMap;
-    pub type IdHashMapU8    <V> = HashMap<u8,     V, IdBuildHasher>;
-    pub type IdHashMapU16   <V> = HashMap<u16,    V, IdBuildHasher>;
-    pub type IdHashMapU32   <V> = HashMap<u32,    V, IdBuildHasher>;
-    pub type IdHashMapU64   <V> = HashMap<u64,    V, IdBuildHasher>;
-    pub type IdHashMapU128  <V> = HashMap<u128,   V, IdBuildHasher>;
-    pub type IdHashMapI8    <V> = HashMap<i8,     V, IdBuildHasher>;
-    pub type IdHashMapI16   <V> = HashMap<i16,    V, IdBuildHasher>;
-    pub type IdHashMapI32   <V> = HashMap<i32,    V, IdBuildHasher>;
-    pub type IdHashMapI64   <V> = HashMap<i64,    V, IdBuildHasher>;
-    pub type IdHashMapI128  <V> = HashMap<i128,   V, IdBuildHasher>;
-    pub type IdHashMapUsize <V> = HashMap<usize,  V, IdBuildHasher>;
-    pub type IdHashMapIsize <V> = HashMap<isize,  V, IdBuildHasher>;
+    pub type IdHashMapU8<V> = HashMap<u8, V, IdBuildHasher>;
+    pub type IdHashMapU16<V> = HashMap<u16, V, IdBuildHasher>;
+    pub type IdHashMapU32<V> = HashMap<u32, V, IdBuildHasher>;
+    pub type IdHashMapU64<V> = HashMap<u64, V, IdBuildHasher>;
+    pub type IdHashMapU128<V> = HashMap<u128, V, IdBuildHasher>;
+    pub type IdHashMapI8<V> = HashMap<i8, V, IdBuildHasher>;
+    pub type IdHashMapI16<V> = HashMap<i16, V, IdBuildHasher>;
+    pub type IdHashMapI32<V> = HashMap<i32, V, IdBuildHasher>;
+    pub type IdHashMapI64<V> = HashMap<i64, V, IdBuildHasher>;
+    pub type IdHashMapI128<V> = HashMap<i128, V, IdBuildHasher>;
+    pub type IdHashMapUsize<V> = HashMap<usize, V, IdBuildHasher>;
+    pub type IdHashMapIsize<V> = HashMap<isize, V, IdBuildHasher>;
     pub type IdHashMapTypeId<V> = HashMap<TypeId, V, IdBuildHasher>;
 }
 

@@ -47,13 +47,13 @@
 //!
 //! **500x difference** in work done!
 //!
-//! This is why we keep **both parsers** - different tools for different jobs. 
+//! This is why we keep **both parsers** - different tools for different jobs.
 
+use super::error::ParseErrorKind;
+use crate::hash::HashMap;
+use crate::object::Value;
 #[cfg(feature = "no_std")]
 use crate::prelude::*;
-use crate::hash::HashMap;
-use crate::object::Value; 
-use super::error::ParseErrorKind;
 
 /// Frame state descriptor - describes what the parser expects next
 ///
@@ -88,7 +88,7 @@ enum StackFrame {
         /// Accumulated items
         items: Vec<Value>,
     },
-} 
+}
 
 impl StackFrame {
     /// Create a new empty Object frame
@@ -101,23 +101,19 @@ impl StackFrame {
 
     /// Create a new empty Array frame
     pub fn new_array() -> Self {
-        StackFrame::Array {
-            items: Vec::new(),
-        }
+        StackFrame::Array { items: Vec::new() }
     }
 }
 
 /// The structure of Stack of Frames
 pub struct ValueStack {
-    stack: Vec<StackFrame>
+    stack: Vec<StackFrame>,
 }
 
 impl ValueStack {
     /// Create a new empty ValueStack
     pub fn new() -> Self {
-        Self {
-            stack: Vec::new()
-        }
+        Self { stack: Vec::new() }
     }
 
     #[allow(dead_code)]
@@ -137,7 +133,7 @@ impl ValueStack {
         self.stack.last()
     }
 
-    #[allow(dead_code)] 
+    #[allow(dead_code)]
     /// Get a mutable reference to the current stack frame (if any)
     fn last_mut(&mut self) -> Option<&mut StackFrame> {
         self.stack.last_mut()
@@ -148,14 +144,19 @@ impl ValueStack {
     /// Returns None if stack is empty (top-level or before first container)
     pub fn current_frame_state(&self) -> Option<FrameState> {
         match self.last() {
-            Some(StackFrame::Object { current_key: None, .. }) => Some(FrameState::ObjectWaitingForKey),
-            Some(StackFrame::Object { current_key: Some(_), .. }) => Some(FrameState::ObjectWaitingForValue),
+            Some(StackFrame::Object {
+                current_key: None, ..
+            }) => Some(FrameState::ObjectWaitingForKey),
+            Some(StackFrame::Object {
+                current_key: Some(_),
+                ..
+            }) => Some(FrameState::ObjectWaitingForValue),
             Some(StackFrame::Array { .. }) => Some(FrameState::Array),
             None => None,
         }
     }
 
-    #[allow(dead_code)] 
+    #[allow(dead_code)]
     /// Push a new container frame onto the stack
     fn push_frame(&mut self, frame: StackFrame) {
         self.stack.push(frame);
@@ -163,7 +164,7 @@ impl ValueStack {
 
     pub fn push_new_object(&mut self) {
         self.stack.push(StackFrame::new_object());
-    } 
+    }
 
     pub fn push_new_key(&mut self, key: String) -> Result<(), ParseErrorKind> {
         match self.stack.last_mut() {
@@ -173,13 +174,13 @@ impl ValueStack {
             }
             _ => Err(ParseErrorKind::Message("Cannot push key - not in object")),
         }
-    } 
+    }
 
     pub fn push_new_array(&mut self) {
         self.stack.push(StackFrame::new_array());
-    } 
+    }
 
-    #[allow(dead_code)] 
+    #[allow(dead_code)]
     /// Pop the top frame from the stack
     fn pop_frame(&mut self) -> Option<StackFrame> {
         self.stack.pop()
@@ -193,7 +194,8 @@ impl ValueStack {
     pub fn push(&mut self, value: Value) -> Result<(), ParseErrorKind> {
         match self.stack.last_mut() {
             Some(StackFrame::Object { map, current_key }) => {
-                let key = current_key.take()
+                let key = current_key
+                    .take()
                     .ok_or_else(|| ParseErrorKind::Message("Object value without key"))?;
                 map.insert(key, value);
                 Ok(())
@@ -202,9 +204,9 @@ impl ValueStack {
                 items.push(value);
                 Ok(())
             }
-            None => {
-                Err(ParseErrorKind::Message("Cannot push - no container on stack"))
-            }
+            None => Err(ParseErrorKind::Message(
+                "Cannot push - no container on stack",
+            )),
         }
     }
 
@@ -218,7 +220,9 @@ impl ValueStack {
     /// Returns Ok(None) if pushed into parent successfully
     pub fn push_to_parent(&mut self) -> Result<Option<Value>, ParseErrorKind> {
         // Pop current container
-        let frame = self.stack.pop()
+        let frame = self
+            .stack
+            .pop()
             .ok_or_else(|| ParseErrorKind::Message("Cannot push_to_parent - stack is empty"))?;
 
         // Convert to Value
@@ -238,7 +242,7 @@ impl ValueStack {
     }
 }
 
-#[allow(dead_code)] 
+#[allow(dead_code)]
 /// Stack parser state machine
 ///
 /// Tracks the current parsing state including checkpoint positions for resumable parsing.
@@ -252,4 +256,4 @@ pub enum ParseState {
 
     /// Parsing is complete
     Done,
-} 
+}

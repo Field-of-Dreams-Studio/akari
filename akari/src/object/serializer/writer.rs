@@ -47,9 +47,7 @@ pub struct BinWriter {
 impl BinWriter {
     /// Create a new BinWriter with empty buffer
     pub fn new() -> Self {
-        Self {
-            buffer: Vec::new(),
-        }
+        Self { buffer: Vec::new() }
     }
 
     /// Create a new BinWriter with specified capacity

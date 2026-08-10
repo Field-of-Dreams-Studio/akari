@@ -1,74 +1,76 @@
 #[cfg(all(feature = "object_macro", test))]
 mod tests {
+    use super::super::value::*;
+    use akari_macro::object;
     use std::collections::HashMap;
-    use akari_macro::object; 
-    use super::super::value::*; 
-    use crate as akari; 
+    extern crate self as akari;
 
-    #[test] 
-    fn new_value(){ 
+    #[test]
+    fn new_value() {
         let a: Value = "some_string".into(); // Using Into for any primitive data type 
 
-        // Using macro 
-        let b = object!("another_string"); 
+        // Using macro
+        let b = object!("another_string");
         let dict = object!({
-            a: "string", 
-            b: [1, 2, 3] 
-        }); 
+            a: "string",
+            b: [1, 2, 3]
+        });
 
         println!("{}, {}, {}", a, b, dict)
     }
 
-    #[test] 
-    fn addition(){ 
-        use super::super::value::Value; 
+    #[test]
+    fn addition() {
+        use super::super::value::Value;
         let obj = object!({a: 1, b: true, c: "hello"});
-        let mut new_obj = Value::new_dict(); 
+        let mut new_obj = Value::new_dict();
         new_obj += object!({a: 1, b: true});
-        let new_obj = new_obj + object!({c: "hello"}); 
-        assert_eq!(obj, new_obj); 
+        let new_obj = new_obj + object!({c: "hello"});
+        assert_eq!(obj, new_obj);
 
         let mut list = object!([1, "pmine", true]);
-        list += object!({dict: "dict"}); 
-        println!("{:?}", list); 
-    } 
+        list += object!({dict: "dict"});
+        println!("{:?}", list);
+    }
 
-    #[test] 
-    fn multiplication(){ 
-        use super::super::value::Value; 
+    #[test]
+    fn multiplication() {
+        use super::super::value::Value;
         let obj = object!({a: 1, b: true, c: "hello"});
-        let mut new_obj = Value::new_dict(); 
+        let mut new_obj = Value::new_dict();
         new_obj *= object!({a: 1, b: true});
-        let new_obj = new_obj * object!({c: "hello"}); 
-        println!("{}, {}", obj, new_obj); 
+        let new_obj = new_obj * object!({c: "hello"});
+        println!("{}, {}", obj, new_obj);
 
         let mut list = object!([1, "pmine", true]);
-        list *= object!({dict: "dict"}); 
-        println!("{}", list); 
-    } 
+        list *= object!({dict: "dict"});
+        println!("{}", list);
+    }
 
     #[test]
     fn into_json() {
         let obj = object!({a: 1, b: true, c: "hello"});
         let json = obj.into_json();
-        println!("{:?}", json); 
-    } 
+        println!("{:?}", json);
+    }
 
-    #[test] 
+    #[test]
     fn into_json_dangerous_string() {
         let obj = object!({a: 1, b: true, c: "\"hello\"\\"});
         let json = obj.into_json();
-        println!("{:?}", json); 
-        obj.into_jsonf("./data.json").expect("Failed to write JSON to file"); 
-    } 
+        println!("{:?}", json);
+        obj.into_jsonf("./data.json")
+            .expect("Failed to write JSON to file");
+    }
 
-    #[test] 
+    #[test]
     fn into_json_unicode_escape() {
-        let obj = Value::from_json(r#"{"a": "hello", "b": "\u2392\uaf34\uaa90\u8482\u8848"}"#).expect("Failed to parse JSON");
+        let obj = Value::from_json(r#"{"a": "hello", "b": "\u2392\uaf34\uaa90\u8482\u8848"}"#)
+            .expect("Failed to parse JSON");
         let json = obj.into_json();
-        println!("{}", json); 
-    } 
-    
+        println!("{}", json);
+    }
+
     #[test]
     fn test_from_json_object() {
         let json = r#"{"a": 1, "b": true, "c": "hello"}"#;
@@ -79,27 +81,30 @@ mod tests {
         expected_map.insert("c".to_string(), Value::Str("hello".to_string()));
         assert_eq!(obj, Value::Dict(expected_map));
     }
-    
+
     #[test]
     fn test_from_json_array() {
         let json = r#"[1, 2, 3]"#;
         let obj = Value::from_json(json).expect("Failed to parse JSON");
-        assert_eq!(obj, Value::List(vec![
-            Value::Numerical(1.0),
-            Value::Numerical(2.0),
-            Value::Numerical(3.0)
-        ]));
+        assert_eq!(
+            obj,
+            Value::List(vec![
+                Value::Numerical(1.0),
+                Value::Numerical(2.0),
+                Value::Numerical(3.0)
+            ])
+        );
     }
-    
+
     #[test]
     #[allow(unused_variables)]
     fn test_from_json_nested() {
         let json = r#"{"a": [true, false], "b": {"nested": "value"}}"#;
         let obj = Value::from_json(json).expect("Failed to parse JSON");
         // Further assertions can be added here.
-    } 
+    }
 
-    #[test] 
+    #[test]
     fn test_object_macro() {
         let obj = object!({a: 1, b: true, c: "hello"});
         let mut expected_map = HashMap::new();
@@ -107,44 +112,53 @@ mod tests {
         expected_map.insert("b".to_string(), Value::Boolean(true));
         expected_map.insert("c".to_string(), Value::Str("hello".to_string()));
         assert_eq!(obj, Value::Dict(expected_map));
-    } 
+    }
 
-    #[test] 
-    fn test_none_null() { 
-        let obj = Value::from_json(r#"
+    #[test]
+    fn test_none_null() {
+        let obj = Value::from_json(
+            r#"
             {"a": null, "b": "hello", "c": 42}
-        "#).expect("Failed to parse JSON"); 
-        let mut expected_map = HashMap::new(); 
-        expected_map.insert("a".to_string(), Value::None); 
-        expected_map.insert("b".to_string(), Value::Str("hello".to_string())); 
-        expected_map.insert("c".to_string(), Value::Numerical(42.0)); 
-        assert_eq!(obj, Value::Dict(expected_map)); 
+        "#,
+        )
+        .expect("Failed to parse JSON");
+        let mut expected_map = HashMap::new();
+        expected_map.insert("a".to_string(), Value::None);
+        expected_map.insert("b".to_string(), Value::Str("hello".to_string()));
+        expected_map.insert("c".to_string(), Value::Numerical(42.0));
+        assert_eq!(obj, Value::Dict(expected_map));
 
-        println!("{}", object!({a: Value::None}).into_json()); 
-    } 
+        println!("{}", object!({a: Value::None}).into_json());
+    }
 
-    #[test] 
-    fn test_object_macro_expr() { 
-        let a = 1; 
+    #[test]
+    fn test_object_macro_expr() {
+        let a = 1;
         let obj = object!({a: a, b: [1, 2, 3], c: {
             hello: "world"
         }});
         let mut expected_map = HashMap::new();
         expected_map.insert("a".to_string(), Value::Numerical(1.0));
-        expected_map.insert("b".to_string(), Value::List(vec![
-            Value::Numerical(1.0),
-            Value::Numerical(2.0),
-            Value::Numerical(3.0)
-        ]));
-        expected_map.insert("c".to_string(), Value::Dict({
-            let mut inner_map = HashMap::new();
-            inner_map.insert("hello".to_string(), Value::Str("world".to_string()));
-            inner_map
-        })); 
-        // assert_eq!(obj, Value::Dictionary(expected_map)); 
-        println!("{:?}", obj.format()); 
-        println!("{:?}", obj.into_json()); 
-    } 
+        expected_map.insert(
+            "b".to_string(),
+            Value::List(vec![
+                Value::Numerical(1.0),
+                Value::Numerical(2.0),
+                Value::Numerical(3.0),
+            ]),
+        );
+        expected_map.insert(
+            "c".to_string(),
+            Value::Dict({
+                let mut inner_map = HashMap::new();
+                inner_map.insert("hello".to_string(), Value::Str("world".to_string()));
+                inner_map
+            }),
+        );
+        // assert_eq!(obj, Value::Dictionary(expected_map));
+        println!("{:?}", obj.format());
+        println!("{:?}", obj.into_json());
+    }
 
     #[test]
     fn test_numerical_object() {
@@ -156,9 +170,9 @@ mod tests {
     fn test_list_object() {
         let list_obj = object!(["aaa", "bbb"]);
         assert_eq!(
-            list_obj, 
+            list_obj,
             Value::List(vec![
-                Value::Str("aaa".to_string()), 
+                Value::Str("aaa".to_string()),
                 Value::Str("bbb".to_string())
             ])
         );
@@ -166,16 +180,19 @@ mod tests {
 
     #[test]
     fn test_dictionary_object() {
-        let obj_obj = object!({c: String::from("p"), b: [String::from("aaa"), "bbb"], u: 32}); 
-        println!("{:?}", obj_obj.format()); 
+        let obj_obj = object!({c: String::from("p"), b: [String::from("aaa"), "bbb"], u: 32});
+        println!("{:?}", obj_obj.format());
         assert_eq!(
-            obj_obj, 
+            obj_obj,
             Value::Dict(HashMap::from_iter([
                 ("c".to_string(), Value::Str("p".to_string())),
-                ("b".to_string(), Value::List(vec![
-                    Value::Str("aaa".to_string()), 
-                    Value::Str("bbb".to_string())
-                ])),
+                (
+                    "b".to_string(),
+                    Value::List(vec![
+                        Value::Str("aaa".to_string()),
+                        Value::Str("bbb".to_string())
+                    ])
+                ),
                 ("u".to_string(), Value::Numerical(32.0)),
             ]))
         );
@@ -187,14 +204,14 @@ mod tests {
             string: String::from("hello"),
             number: 42
         });
-        
+
         let expected = {
             let mut map = HashMap::new();
             map.insert("string".to_string(), Value::Str("hello".to_string()));
             map.insert("number".to_string(), Value::Numerical(42.0));
             Value::Dict(map)
         };
-        
+
         assert_eq!(obj_obj, expected);
     }
 
@@ -211,73 +228,78 @@ mod tests {
                 }
             }
         });
-        
+
         // Building expected object manually for verification
         let mut inner_complex = HashMap::new();
         inner_complex.insert("value".to_string(), Value::Str("nested value".to_string()));
         inner_complex.insert("flag".to_string(), Value::Boolean(false));
-        
+
         let mut properties = HashMap::new();
         properties.insert("boolean".to_string(), Value::Boolean(true));
-        properties.insert("list".to_string(), Value::List(vec![
-            Value::Numerical(1.0),
-            Value::Numerical(2.0),
-            Value::Numerical(3.0)
-        ]));
+        properties.insert(
+            "list".to_string(),
+            Value::List(vec![
+                Value::Numerical(1.0),
+                Value::Numerical(2.0),
+                Value::Numerical(3.0),
+            ]),
+        );
         properties.insert("complex".to_string(), Value::Dict(inner_complex));
-        
+
         let mut root = HashMap::new();
         root.insert("name".to_string(), Value::Str("nested_test".to_string()));
         root.insert("properties".to_string(), Value::Dict(properties));
-        
+
         let expected = Value::Dict(root);
-        
+
         assert_eq!(nested_obj, expected);
-    }  
+    }
 
-    #[test] 
-    fn test_object_6(){ 
+    #[test]
+    fn test_object_6() {
         let obj = object!({
-            a: 1, 
-            b: true, 
-            c: "hello", 
-            d: [1, 2, 3], 
-            e: {x: 10, y: 20}, 
+            a: 1,
+            b: true,
+            c: "hello",
+            d: [1, 2, 3],
+            e: {x: 10, y: 20},
             f: {
-                a: [String::from("1"), String::from("2")], 
-                b: ["1", "2"], 
+                a: [String::from("1"), String::from("2")],
+                b: ["1", "2"],
                 c: [String::from("1"), "2"]
-            }, 
-            g: [ 
-                {a: String::from("1"), b: 2}, 
-                {a: 3, b: 4}, 
-                {a: String::from("1"), b: String::from("1")} 
+            },
+            g: [
+                {a: String::from("1"), b: 2},
+                {a: 3, b: 4},
+                {a: String::from("1"), b: String::from("1")}
             ]
-        }); 
-        println!("{:?}", obj.into_json()); 
-    } 
+        });
+        println!("{:?}", obj.into_json());
+    }
 
-    #[test] 
-    fn get_key_test(){
-        let a = object!({ 
-            a: 1, 
-            b: true, 
-            c: "hello", 
-            d: [1, 2, 3], 
-            e: {x: 10, y: 20}, 
+    #[test]
+    fn get_key_test() {
+        let a = object!({
+            a: 1,
+            b: true,
+            c: "hello",
+            d: [1, 2, 3],
+            e: {x: 10, y: 20},
             f: {
-                a: [String::from("1"), String::from("2")], 
-                b: ["1", "2"], 
+                a: [String::from("1"), String::from("2")],
+                b: ["1", "2"],
                 c: [String::from("1"), "2"]
-            }, 
-            g: [ 
-                {a: String::from("1"), b: 2}, 
-                {a: 3, b: 4}, 
-                {a: String::from("1"), b: String::from("1")} 
+            },
+            g: [
+                {a: String::from("1"), b: 2},
+                {a: 3, b: 4},
+                {a: String::from("1"), b: String::from("1")}
             ]
-        }).get("f").get("a").idx(0)
-        .to_string(); 
-        assert_eq!(a, "\"1\""); 
+        })
+        .get("f")
+        .get("a")
+        .idx(0)
+        .to_string();
+        assert_eq!(a, "\"1\"");
     }
 }
-

@@ -1,5 +1,5 @@
-use crate::object::Value;
 use super::BinWriter;
+use crate::object::Value;
 
 pub trait ValueSerializer<O: ?Sized> {
     /// Serialization error type

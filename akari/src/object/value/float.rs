@@ -116,7 +116,11 @@ impl FloatExt for f64 {
             // integer and route through `powi2`. This is lossy for genuinely
             // fractional exponents (e.g. `2.0.powf2(0.5)` returns `2.0`, not
             // `√2`) but at least keeps the result finite.
-            let rounded = if exp >= 0.0 { (exp + 0.5) as i32 } else { (exp - 0.5) as i32 };
+            let rounded = if exp >= 0.0 {
+                (exp + 0.5) as i32
+            } else {
+                (exp - 0.5) as i32
+            };
             self.powi2(rounded)
         }
         #[cfg(not(feature = "no_std"))]

@@ -1,13 +1,13 @@
-use std::collections::HashMap; 
-use crate::Value; 
+use crate::Value;
+use std::collections::HashMap;
 
-pub mod parse;
 pub mod compile;
-pub mod template_manager; 
-pub mod templates;  
+pub mod parse;
+pub mod template_manager;
+pub mod templates;
 
-#[cfg(test)] 
-mod test; 
+#[cfg(test)]
+mod test;
 
 /// Renders a template string with provided data
 ///
@@ -18,7 +18,7 @@ mod test;
 /// # Returns
 /// * Result containing the rendered output or an error
 pub fn render(template_str: &str, data: &HashMap<String, Value>) -> Result<String, String> {
-    let tokens = parse::tokenize(template_str); 
+    let tokens = parse::tokenize(template_str);
     compile::compile(tokens, data.clone())
 }
 
@@ -35,4 +35,4 @@ pub fn render_file(template_path: &str, data: &HashMap<String, Value>) -> Result
     let content = fs::read_to_string(template_path)
         .map_err(|e| format!("Failed to read template file: {}", e))?;
     render(&content, data)
-} 
+}

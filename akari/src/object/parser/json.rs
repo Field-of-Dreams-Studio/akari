@@ -1,12 +1,12 @@
-#[cfg(feature = "no_std")]
-use crate::prelude::*;
+use super::error::ParseErrorKind;
+use super::{BinInner, Next, ParseError, ValueParser};
 use crate::hash::HashMap;
-use crate::object::value::float::FloatExt;
 use crate::object::Value;
 use crate::object::parser::FrameState;
 use crate::object::parser::stack::ValueStack;
-use super::{ValueParser, Next, ParseError, BinInner};
-use super::error::ParseErrorKind;
+use crate::object::value::float::FloatExt;
+#[cfg(feature = "no_std")]
+use crate::prelude::*;
 
 /// Primitive parsing functions for JSON format
 ///
@@ -43,8 +43,9 @@ mod primitive_parsing {
         Err(ParseError::new(
             ParseErrorKind::UnexpectedToken {
                 found: String::from_utf8_lossy(
-                    &inner.buffer()[pos..pos.saturating_add(4).min(inner.buffer().len())]
-                ).to_string(),
+                    &inner.buffer()[pos..pos.saturating_add(4).min(inner.buffer().len())],
+                )
+                .to_string(),
                 expected: &["null", "none"],
             },
             pos,
@@ -83,8 +84,9 @@ mod primitive_parsing {
         Err(ParseError::new(
             ParseErrorKind::UnexpectedToken {
                 found: String::from_utf8_lossy(
-                    &inner.buffer()[pos..pos.saturating_add(5).min(inner.buffer().len())]
-                ).to_string(),
+                    &inner.buffer()[pos..pos.saturating_add(5).min(inner.buffer().len())],
+                )
+                .to_string(),
                 expected: &["true", "false"],
             },
             pos,
@@ -111,7 +113,7 @@ mod primitive_parsing {
         let mut i = start;
 
         if i >= len {
-            inner.set_pos(start); 
+            inner.set_pos(start);
             return Err(ParseError::new(ParseErrorKind::Incomplete, start));
         }
 
@@ -171,7 +173,8 @@ mod primitive_parsing {
             let mut exp_val: i32 = 0;
             let mut exp_digits = 0usize;
             while i < len && bytes[i].is_ascii_digit() {
-                exp_val = exp_val.saturating_mul(10)
+                exp_val = exp_val
+                    .saturating_mul(10)
                     .saturating_add((bytes[i] - b'0') as i32);
                 i += 1;
                 exp_digits += 1;
@@ -188,8 +191,13 @@ mod primitive_parsing {
 
         if i < len {
             let b = bytes[i];
-            let is_delim = b == b' ' || b == b'\t' || b == b'\r' || b == b'\n'
-                || b == b',' || b == b']' || b == b'}';
+            let is_delim = b == b' '
+                || b == b'\t'
+                || b == b'\r'
+                || b == b'\n'
+                || b == b','
+                || b == b']'
+                || b == b'}';
             if !is_delim {
                 return Err(ParseError::new(ParseErrorKind::InvalidNumber, start));
             }
@@ -206,7 +214,10 @@ mod primitive_parsing {
         let pos = inner.pos();
         // Consume opening '"'
         if inner.next_byte() != Some(b'"') {
-            return Err(ParseError::new(ParseErrorKind::Message("Expected '\"'"), pos));
+            return Err(ParseError::new(
+                ParseErrorKind::Message("Expected '\"'"),
+                pos,
+            ));
         }
 
         let mut bytes = Vec::new();
@@ -215,12 +226,9 @@ mod primitive_parsing {
             match inner.next_byte() {
                 None => {
                     inner.set_pos(pos);
-                    return Err(ParseError::new(
-                        ParseErrorKind::Incomplete,
-                        inner.pos(),
-                    ));
+                    return Err(ParseError::new(ParseErrorKind::Incomplete, inner.pos()));
                 }
-                Some(b'"') => break,  // End of string
+                Some(b'"') => break, // End of string
                 Some(b'\\') => {
                     // Handle escape sequences
                     match inner.next_byte() {
@@ -236,28 +244,28 @@ mod primitive_parsing {
                             // Parse \uXXXX Unicode escape
                             let codepoint = parse_unicode_escape(inner)?;
                             let mut buf = [0u8; 4];
-                            let ch = char::from_u32(codepoint)
-                                .ok_or_else(|| ParseError::new(
+                            let ch = char::from_u32(codepoint).ok_or_else(|| {
+                                ParseError::new(
                                     ParseErrorKind::Message("Invalid Unicode codepoint"),
                                     inner.pos(),
-                                ))?;
+                                )
+                            })?;
                             let len = ch.encode_utf8(&mut buf).len();
                             bytes.extend_from_slice(&buf[..len]);
                         }
                         None => {
                             inner.set_pos(pos);
+                            return Err(ParseError::new(ParseErrorKind::Incomplete, inner.pos()));
+                        }
+                        _ => {
                             return Err(ParseError::new(
-                                ParseErrorKind::Incomplete,
+                                ParseErrorKind::Message("Invalid escape sequence"),
                                 inner.pos(),
                             ));
                         }
-                        _ => return Err(ParseError::new(
-                            ParseErrorKind::Message("Invalid escape sequence"),
-                            inner.pos(),
-                        )),
                     }
                 }
-                Some(b) => bytes.push(b),  // Regular byte (including multi-byte UTF-8)
+                Some(b) => bytes.push(b), // Regular byte (including multi-byte UTF-8)
             }
         }
 
@@ -275,23 +283,21 @@ mod primitive_parsing {
         let start = inner.pos(); // Save position for backtracking
         let mut codepoint = 0u32;
         for _ in 0..4 {
-            let b = inner.next_byte()
-                .ok_or_else(|| {
-                    inner.set_pos(start);
-                    ParseError::new(
-                        ParseErrorKind::Incomplete,
-                        inner.pos(),
-                    )
-                })?;
+            let b = inner.next_byte().ok_or_else(|| {
+                inner.set_pos(start);
+                ParseError::new(ParseErrorKind::Incomplete, inner.pos())
+            })?;
 
             let digit = match b {
                 b'0'..=b'9' => (b - b'0') as u32,
                 b'a'..=b'f' => (b - b'a' + 10) as u32,
                 b'A'..=b'F' => (b - b'A' + 10) as u32,
-                _ => return Err(ParseError::new(
-                    ParseErrorKind::Message("Invalid hex digit in Unicode escape"),
-                    inner.pos(),
-                )),
+                _ => {
+                    return Err(ParseError::new(
+                        ParseErrorKind::Message("Invalid hex digit in Unicode escape"),
+                        inner.pos(),
+                    ));
+                }
             };
 
             codepoint = codepoint * 16 + digit;
@@ -420,7 +426,9 @@ impl BinJsonParser {
             Some(b'{') => self.parse_object(),
             Some(b'[') => self.parse_array(),
             Some(b'"') => primitive_parsing::parse_string(&mut self.inner).map(Value::Str),
-            Some(b't') | Some(b'f') => primitive_parsing::parse_boolean(&mut self.inner).map(Value::Boolean),
+            Some(b't') | Some(b'f') => {
+                primitive_parsing::parse_boolean(&mut self.inner).map(Value::Boolean)
+            }
             Some(b'n') => primitive_parsing::parse_null(&mut self.inner),
             Some(b'-') | Some(b'0'..=b'9') => {
                 primitive_parsing::parse_number(&mut self.inner, self.eof).map(Value::Numerical)
@@ -528,7 +536,7 @@ impl BinJsonParser {
                     return Err(self.error(ParseErrorKind::UnexpectedToken {
                         found: format!("{:?}", self.inner.peek_byte()),
                         expected: &[",", "}"],
-                    }))
+                    }));
                 }
             }
         }
@@ -592,14 +600,13 @@ impl BinJsonParser {
                     return Err(self.error(ParseErrorKind::UnexpectedToken {
                         found: format!("{:?}", self.inner.peek_byte()),
                         expected: &[",", "]"],
-                    }))
+                    }));
                 }
             }
         }
         self.current_depth -= 1;
         Ok(Value::List(vec))
     }
-
 }
 
 /// Implementation of the ValueParser trait for binary JSON format
@@ -610,8 +617,8 @@ impl ValueParser<[u8]> for BinJsonParser {
         BinJsonParser {
             inner: BinInner::new(),
             eof: false,
-            max_depth: 512,      // Default: prevent deeply nested structures
-            current_depth: 0,    // Start at depth 0
+            max_depth: 512,   // Default: prevent deeply nested structures
+            current_depth: 0, // Start at depth 0
         }
     }
 
@@ -681,8 +688,8 @@ impl ValueParser<str> for BinJsonParser {
         BinJsonParser {
             inner: BinInner::new(),
             eof: false,
-            max_depth: 512,      // Default: prevent deeply nested structures
-            current_depth: 0,    // Start at depth 0
+            max_depth: 512,   // Default: prevent deeply nested structures
+            current_depth: 0, // Start at depth 0
         }
     }
 
@@ -781,11 +788,11 @@ pub struct StackParser {
     inner: BinInner,
     eof: bool,
     stack: ValueStack,
-    max_depth: usize,  // Maximum nesting depth (default: 512)
-    // TODO: Add current_depth tracking when implementing depth checking
+    max_depth: usize, // Maximum nesting depth (default: 512)
+                      // TODO: Add current_depth tracking when implementing depth checking
 }
 
-impl StackParser { 
+impl StackParser {
     /// Check if we need more input
     fn needs_more(&self) -> bool {
         !self.eof && self.inner.pos() >= self.inner.buffer().len()
@@ -801,10 +808,10 @@ impl StackParser {
         ParseError::new(ParseErrorKind::Message(msg), self.inner.pos())
     }
 
-    /// Compact internal buffer to free consumed data 
+    /// Compact internal buffer to free consumed data
     pub fn compact(&mut self) {
         self.inner.compact();
-    } 
+    }
 
     /// Parse a primitive value (anything except '{' or '[')
     ///
@@ -821,14 +828,13 @@ impl StackParser {
         // Determine primitive type and parse
         // Each primitive function handles its own position restoration on Incomplete
         match self.inner.peek_byte() {
-            Some(b'"') => primitive_parsing::parse_string(&mut self.inner)
-                .map(Value::Str),
-            Some(b't') | Some(b'f') => primitive_parsing::parse_boolean(&mut self.inner)
-                .map(Value::Boolean),
+            Some(b'"') => primitive_parsing::parse_string(&mut self.inner).map(Value::Str),
+            Some(b't') | Some(b'f') => {
+                primitive_parsing::parse_boolean(&mut self.inner).map(Value::Boolean)
+            }
             Some(b'n') => primitive_parsing::parse_null(&mut self.inner),
             Some(b'-') | Some(b'0'..=b'9') => {
-                primitive_parsing::parse_number(&mut self.inner, self.eof)
-                    .map(Value::Numerical)
+                primitive_parsing::parse_number(&mut self.inner, self.eof).map(Value::Numerical)
             }
             Some(b) => Err(self.error(ParseErrorKind::UnexpectedToken {
                 found: format!("0x{:02X}", b),
@@ -841,23 +847,23 @@ impl StackParser {
     /// Main parsing loop (stack-based, resumable)
     ///
     fn parse_loop(&mut self) -> Result<Value, ParseError> {
-        loop { 
+        loop {
             self.inner.skip_whitespace();
 
             if self.needs_more() {
                 return Err(self.error(ParseErrorKind::Incomplete));
             }
 
-            match self.stack.current_frame_state() { 
+            match self.stack.current_frame_state() {
                 Some(FrameState::Array) => {
                     match self.inner.peek_byte() {
                         Some(b']') => {
-                            match self.end_array() { 
+                            match self.end_array() {
                                 Ok(Some(v)) => return Ok(v),
                                 Ok(None) => continue, // Still more to parse
                                 Err(e) => return Err(ParseError::new(e, self.inner.pos())),
                             }
-                        } 
+                        }
                         _ => {
                             // Expecting a value in the array
                             match self.inner.peek_byte() {
@@ -868,36 +874,40 @@ impl StackParser {
                                 Some(b'[') => self.parse_array()?,
                                 _ => {
                                     let r = self.parse_primitive()?;
-                                    self.stack.push(r).map_err(|e| ParseError::new(e, self.inner.pos()))?;
+                                    self.stack
+                                        .push(r)
+                                        .map_err(|e| ParseError::new(e, self.inner.pos()))?;
                                 }
-                            } 
+                            }
                         }
-                    } 
-                }, 
+                    }
+                }
                 Some(FrameState::ObjectWaitingForKey) => {
                     match self.inner.peek_byte() {
                         Some(b',') => {
                             self.inner.next_byte(); // Consume ':' if present (error otherwise) 
-                        } 
-                        Some(b'"') => { 
+                        }
+                        Some(b'"') => {
                             let key = primitive_parsing::parse_string(&mut self.inner)?;
-                            self.stack.push_new_key(key).map_err(|e| ParseError::new(e, self.inner.pos()))?;
+                            self.stack
+                                .push_new_key(key)
+                                .map_err(|e| ParseError::new(e, self.inner.pos()))?;
                         }
                         Some(b'}') => {
-                            match self.end_object() { 
+                            match self.end_object() {
                                 Ok(Some(v)) => return Ok(v),
                                 Ok(None) => continue, // Still more to parse
                                 Err(e) => return Err(ParseError::new(e, self.inner.pos())),
                             }
-                        } 
+                        }
                         _ => {
                             return Err(self.error(ParseErrorKind::UnexpectedToken {
                                 found: format!("{:?}", self.inner.peek_byte()),
                                 expected: &["\"", "}"],
-                            }))
+                            }));
                         }
-                    } 
-                },
+                    }
+                }
                 Some(FrameState::ObjectWaitingForValue) => {
                     // Expecting a value for the last key
                     match self.inner.peek_byte() {
@@ -908,19 +918,19 @@ impl StackParser {
                         Some(b'[') => self.parse_array()?,
                         _ => {
                             let r = self.parse_primitive()?;
-                            self.stack.push(r).map_err(|e| ParseError::new(e, self.inner.pos()))?;
+                            self.stack
+                                .push(r)
+                                .map_err(|e| ParseError::new(e, self.inner.pos()))?;
                         }
                     }
-                }, 
-                None => {
-                    match self.inner.peek_byte() {
-                        Some(b'{') => self.parse_object()?,
-                        Some(b'[') => self.parse_array()?,
-                        _ => return self.parse_primitive(),
-                    }
-                }, // Top-level value 
-            } 
-        } 
+                }
+                None => match self.inner.peek_byte() {
+                    Some(b'{') => self.parse_object()?,
+                    Some(b'[') => self.parse_array()?,
+                    _ => return self.parse_primitive(),
+                }, // Top-level value
+            }
+        }
     }
 
     fn parse_array(&mut self) -> Result<(), ParseError> {
@@ -943,17 +953,17 @@ impl StackParser {
         self.inner.next_byte(); // Consume '{'
         self.stack.push_new_object(); // Push new object frame onto stack
         Ok(())
-    } 
+    }
 
     fn end_array(&mut self) -> Result<Option<Value>, ParseErrorKind> {
         self.inner.next_byte(); // Consume ']' 
-        self.stack.push_to_parent() 
+        self.stack.push_to_parent()
     }
 
     fn end_object(&mut self) -> Result<Option<Value>, ParseErrorKind> {
         self.inner.next_byte(); // Consume '}' 
-        self.stack.push_to_parent()  
-    } 
+        self.stack.push_to_parent()
+    }
 }
 
 /// Implementation of ValueParser trait for stack-based parser
@@ -962,10 +972,10 @@ impl ValueParser<[u8]> for StackParser {
 
     fn new() -> Self {
         StackParser {
-            inner: BinInner::new(), 
+            inner: BinInner::new(),
             eof: false,
-            stack: ValueStack::new(), 
-            max_depth: 512,  // Default: prevent deeply nested structures
+            stack: ValueStack::new(),
+            max_depth: 512, // Default: prevent deeply nested structures
         }
     }
 
@@ -1238,7 +1248,7 @@ mod tests {
         assert!(matches!(result, Ok(Next::Value(_))));
     }
 
-        #[test]
+    #[test]
     fn test_simple_object() {
         let mut parser = StackParser::new();
         parser.feed(br#"{"key": "value"}"#).unwrap();
@@ -1289,7 +1299,9 @@ mod tests {
     #[test]
     fn test_stack_nested_structures() {
         let mut parser = StackParser::new();
-        parser.feed(br#"{"a":[1,{"b":[2,3]}],"c":{"d":4}}"#).unwrap();
+        parser
+            .feed(br#"{"a":[1,{"b":[2,3]}],"c":{"d":4}}"#)
+            .unwrap();
         parser.end_of_input();
 
         let result = parser.parse_full().unwrap();
@@ -1301,7 +1313,9 @@ mod tests {
         let mut parser = StackParser::new();
 
         // Chunk 1: Incomplete
-        parser.feed(br#"{"users": [{"name": "Alice", "age":"#).unwrap();
+        parser
+            .feed(br#"{"users": [{"name": "Alice", "age":"#)
+            .unwrap();
         let result1 = parser.parse_next().unwrap();
         assert!(matches!(result1, Next::NeedMore));
 
@@ -1352,7 +1366,9 @@ mod tests {
         let mut parser = StackParser::new();
 
         // Chunk 1: Start deeply nested structure
-        parser.feed(br#"{"data": {"users": [{"id": 1, "name": ""#).unwrap();
+        parser
+            .feed(br#"{"data": {"users": [{"id": 1, "name": ""#)
+            .unwrap();
         assert!(matches!(parser.parse_next(), Ok(Next::NeedMore)));
 
         // Chunk 2: Continue with name
@@ -1378,7 +1394,9 @@ mod tests {
         let mut parser = StackParser::new();
 
         // Test: empty arrays and objects mixed with values
-        parser.feed(br#"{"empty_obj": {}, "empty_arr": [], "nested": [[], {}], "val": 42}"#).unwrap();
+        parser
+            .feed(br#"{"empty_obj": {}, "empty_arr": [], "nested": [[], {}], "val": 42}"#)
+            .unwrap();
         parser.end_of_input();
 
         let result = parser.parse_next().unwrap();
@@ -1404,7 +1422,10 @@ mod tests {
         parser1.feed(br#"[(}"#).unwrap();
         parser1.end_of_input();
         let result1 = parser1.parse_next();
-        assert!(result1.is_err(), "Expected error for mismatched brackets [(}}");  // Double }} to escape
+        assert!(
+            result1.is_err(),
+            "Expected error for mismatched brackets [(}}"
+        ); // Double }} to escape
 
         // Test 2: Missing value after colon {"a":}
         let mut parser2 = StackParser::new();

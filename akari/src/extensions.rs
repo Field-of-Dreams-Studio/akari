@@ -1,10 +1,9 @@
+use crate::hash::{HashMap, IdHashMapTypeId};
 #[cfg(feature = "no_std")]
 use crate::prelude::*;
 use core::any::{Any, TypeId};
-use core::hash::Hash;
 use core::fmt;
-use crate::hash::{HashMap, IdHashMapTypeId};
-
+use core::hash::Hash;
 
 /// Type-based extension storage, typically used by middleware
 /// Each type can have exactly one value
@@ -15,25 +14,24 @@ pub struct Params {
     inner: IdHashMapTypeId<Box<dyn Any + Send + Sync>>,
 }
 
-impl Params { 
+impl Params {
     //
     // Type-based params methods (for middleware)
-    // 
-    /// Creates a new, empty `Params` container. 
-    /// 
-    /// # Examples 
-    /// 
-    /// ```rust 
-    /// use akari::extensions::Params; 
-    /// let params = Params::new(); 
+    //
+    /// Creates a new, empty `Params` container.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use akari::extensions::Params;
+    /// let params = Params::new();
     /// // The inner is empty  
-    /// ``` 
+    /// ```
     pub fn new() -> Self {
         Self {
             inner: IdHashMapTypeId::default(),
         }
     }
-
 
     /// Stores a value in the type-based params storage.
     /// Any previous value of the same type will be replaced.
@@ -41,10 +39,10 @@ impl Params {
     /// # Examples
     ///
     /// ```rust
-    /// use akari::extensions::Params; 
-    /// 
+    /// use akari::extensions::Params;
+    ///
     /// struct User { id: u32, name: String }  
-    /// 
+    ///
     /// let mut req = Params::default();
     ///
     /// // Store authentication information
@@ -61,20 +59,20 @@ impl Params {
     /// # Examples
     ///
     /// ```rust
-    /// use akari::extensions::Params; 
-    /// // In an authentication middleware 
-    /// 
-    /// struct User { id: u32, name: String } 
-    /// 
-    /// // Set the req 
-    /// let mut req = Params::default(); 
-    /// req.set(User { id: 123, name: "Alice".to_string() }); 
-    /// 
+    /// use akari::extensions::Params;
+    /// // In an authentication middleware
+    ///
+    /// struct User { id: u32, name: String }
+    ///
+    /// // Set the req
+    /// let mut req = Params::default();
+    /// req.set(User { id: 123, name: "Alice".to_string() });
+    ///
     /// if let Some(user) = req.get::<User>() {
     ///     println!("Request by: {}", user.name);
     ///     // Proceed with authenticated user
     /// } else {
-    ///     println!("Unauthorized request"); 
+    ///     println!("Unauthorized request");
     /// }
     /// ```
     #[inline]
@@ -90,15 +88,15 @@ impl Params {
     /// # Examples
     ///
     /// ```rust
-    /// use akari::extensions::Params; 
-    /// 
-    /// // Set the req 
-    /// let mut req = Params::default(); 
-    /// req.set(1u8); 
-    /// 
-    /// // Update the u8 
+    /// use akari::extensions::Params;
+    ///
+    /// // Set the req
+    /// let mut req = Params::default();
+    /// req.set(1u8);
+    ///
+    /// // Update the u8
     /// if let Some(number) = req.get_mut::<u8>() {
-    ///     *number += 1 
+    ///     *number += 1
     /// }
     /// ```
     #[inline]
@@ -114,15 +112,15 @@ impl Params {
     /// # Examples
     ///
     /// ```rust
-    /// use akari::extensions::Params; 
-    /// 
-    /// // Set the req 
-    /// let mut req = Params::default(); 
-    /// req.set("Some String".to_string()); 
-    /// 
+    /// use akari::extensions::Params;
+    ///
+    /// // Set the req
+    /// let mut req = Params::default();
+    /// req.set("Some String".to_string());
+    ///
     /// // Take ownership of a value
     /// if let Some(token) = req.take::<String>() {
-    ///     drop(token) 
+    ///     drop(token)
     /// }
     /// ```
     #[inline]
@@ -193,46 +191,44 @@ impl fmt::Display for Params {
         }
         write!(f, "])")
     }
-} 
+}
 
 impl fmt::Debug for Params {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let types: Vec<_> = self.inner.keys().collect();
-        f.debug_struct("Params")
-         .field("types", &types)
-         .finish()
+        f.debug_struct("Params").field("types", &types).finish()
     }
-} 
+}
 
-impl Default for Params { 
+impl Default for Params {
     fn default() -> Self {
-        Self::new() 
+        Self::new()
     }
 }
 
 /// String-based extension storage, typically used by application code
-/// Multiple values of the same type can be stored with different keys 
-pub struct Locals { 
-    inner: HashMap<String, Box<dyn Any + Send + Sync>> 
-} 
+/// Multiple values of the same type can be stored with different keys
+pub struct Locals {
+    inner: HashMap<String, Box<dyn Any + Send + Sync>>,
+}
 
-impl Locals { 
+impl Locals {
     //
     // String-based locals methods (for application code)
     //
-    /// 
-    /// Creates a new, empty `Locals` container. 
-    /// 
-    /// # Examples 
-    /// 
+    ///
+    /// Creates a new, empty `Locals` container.
+    ///
+    /// # Examples
+    ///
     /// ```rust
     /// use akari::extensions::Locals;
-    /// let locals = Locals::new(); 
-    /// // The inner is empty 
-    /// ``` 
-    pub fn new() -> Self { 
-        Self { 
-            inner: HashMap::default() 
+    /// let locals = Locals::new();
+    /// // The inner is empty
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            inner: HashMap::default(),
         }
     }
 
@@ -241,9 +237,9 @@ impl Locals {
     ///
     /// # Examples
     ///
-    /// ```rust 
+    /// ```rust
     /// use akari::extensions::Locals;  
-    /// 
+    ///
     /// let mut req = Locals::default();
     ///
     /// // Store various data with descriptive keys
@@ -263,21 +259,21 @@ impl Locals {
     ///
     /// ```rust
     /// use akari::extensions::Locals;  
-    /// 
-    /// let mut req = Locals::default(); 
-    /// 
+    ///
+    /// let mut req = Locals::default();
+    ///
     /// // Store various data with descriptive keys
     /// req.set("user_id", 123);
     /// req.set("is_premium", true);
-    /// req.set("cart_items", vec!["item1", "item2"]); 
+    /// req.set("cart_items", vec!["item1", "item2"]);
     ///     
     /// // In a request handler
     /// if let Some(is_premium) = req.get::<bool>("is_premium") {
     ///     if *is_premium {
     ///         // Show premium content
     ///     }
-    /// } 
-    /// 
+    /// }
+    ///
     /// // With different types
     /// let user_id = req.get::<i32>("user_id");
     /// let items = req.get::<Vec<String>>("cart_items");
@@ -296,11 +292,11 @@ impl Locals {
     ///
     /// ```rust
     /// use akari::extensions::Locals;  
-    /// 
-    /// let mut req = Locals::default(); 
-    /// 
-    /// // Modify a list of items 
-    /// req.set("cart_items", vec!["item1", "item2"]); 
+    ///
+    /// let mut req = Locals::default();
+    ///
+    /// // Modify a list of items
+    /// req.set("cart_items", vec!["item1", "item2"]);
     /// if let Some(items) = req.get_mut::<Vec<String>>("cart_items") {
     ///     items.push("new_item".to_string());
     /// }
@@ -319,16 +315,16 @@ impl Locals {
     ///
     /// ```rust
     /// use akari::extensions::Locals;  
-    /// 
+    ///
     /// let mut req = Locals::default();  
-    /// 
-    /// // Set the token 
-    /// req.set("session_token", "some_token".to_string()); 
-    /// 
+    ///
+    /// // Set the token
+    /// req.set("session_token", "some_token".to_string());
+    ///
     /// // Take ownership of a value
     /// if let Some(token) = req.take::<String>("session_token") {
-    ///     // Use and consume the token 
-    ///     drop(token) 
+    ///     // Use and consume the token
+    ///     drop(token)
     /// }
     /// ```
     #[inline]
@@ -340,8 +336,8 @@ impl Locals {
                 return any_box.downcast::<T>().ok().map(|boxed_t| *boxed_t);
             }
         }
-        None 
-    } 
+        None
+    }
 
     /// Returns all keys currently stored in the locals map
     ///
@@ -349,14 +345,14 @@ impl Locals {
     ///
     /// ```rust
     /// use akari::extensions::Locals;  
-    /// 
+    ///
     /// let mut req = Locals::default();
     ///
     /// // Store various data with descriptive keys
     /// req.set("user_id", 123);
     /// req.set("is_premium", true);
-    /// req.set("cart_items", vec!["item1", "item2"]); 
-    /// 
+    /// req.set("cart_items", vec!["item1", "item2"]);
+    ///
     /// // Inspect what data is attached to the request
     /// for key in req.keys() {
     ///     println!("Request has data with key: {}", key);
@@ -364,24 +360,32 @@ impl Locals {
     /// ```
     pub fn keys(&self) -> Vec<&str> {
         self.inner.keys().map(|s| s.as_str()).collect()
-    } 
+    }
 
     //
     // Utility bridging methods
     //
     /// Exports a param value to the locals storage with the given key.
-    /// The value must implement Clone. Does nothing if the param doesn't exist. 
+    /// The value must implement Clone. Does nothing if the param doesn't exist.
     /// ```
-    pub fn export_param<T: 'static + Clone + Send + Sync>(&mut self, params: &Params, key: impl Into<String>) {
+    pub fn export_param<T: 'static + Clone + Send + Sync>(
+        &mut self,
+        params: &Params,
+        key: impl Into<String>,
+    ) {
         if let Some(value) = params.get::<T>() {
             let cloned = value.clone();
             self.set(key, cloned);
         }
-    } 
+    }
 
     /// Imports a local value into the params storage.
     /// The value must implement Clone. Does nothing if the local doesn't exist. bv
-    pub fn import_param<T: 'static + Clone + Send + Sync>(&mut self, params: &mut Params, key: &str) {
+    pub fn import_param<T: 'static + Clone + Send + Sync>(
+        &mut self,
+        params: &mut Params,
+        key: &str,
+    ) {
         if let Some(value) = self.get::<T>(key) {
             let cloned = value.clone();
             params.set(cloned);
@@ -446,27 +450,25 @@ impl fmt::Display for Locals {
         let keys: Vec<&str> = self.inner.keys().map(|k| k.as_str()).collect();
         write!(f, "Locals(keys={:?})", keys)
     }
-} 
+}
 
 impl fmt::Debug for Locals {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let keys: Vec<&str> = self.inner.keys().map(|k| k.as_str()).collect();
-        f.debug_struct("Locals")
-         .field("keys", &keys)
-         .finish()
+        f.debug_struct("Locals").field("keys", &keys).finish()
     }
-} 
+}
 
-impl Default for Locals { 
+impl Default for Locals {
     fn default() -> Self {
-        Self::new() 
+        Self::new()
     }
-} 
+}
 
 /// Object-safe supertrait for stored values.
 ///
 /// This trait is implemented for all types that are `Any + Clone + Send + Sync + 'static`.
-/// It allows cloning a boxed trait object via dynamic dispatch. 
+/// It allows cloning a boxed trait object via dynamic dispatch.
 pub trait ParamValue: Any + Send + Sync + 'static {
     /// Clones this value and returns it as a boxed `ParamValue`.
     ///
@@ -542,11 +544,11 @@ impl ParamsClone {
     /// # Examples
     ///
     /// ```rust
-    /// use akari::extensions::ParamsClone; 
-    /// 
-    /// #[derive(Clone, Debug)] 
-    /// struct User { id: u32, name: String } 
-    /// 
+    /// use akari::extensions::ParamsClone;
+    ///
+    /// #[derive(Clone, Debug)]
+    /// struct User { id: u32, name: String }
+    ///
     /// let mut req = ParamsClone::default();
     ///
     /// // Store authentication information
@@ -565,15 +567,15 @@ impl ParamsClone {
     /// ```rust
     /// use akari::extensions::ParamsClone;
     /// // In an authentication middleware
-    /// #[derive(Clone, Debug)] 
-    /// struct User { id: u32, name: String } 
+    /// #[derive(Clone, Debug)]
+    /// struct User { id: u32, name: String }
     ///
     /// let mut req = ParamsClone::default();
     /// req.set(User { id: 123, name: "Alice".to_string() });
     /// if let Some(user) = req.get::<User>() {
     ///     println!("Request by: {}", user.name);
     /// } else {
-    ///     println!("Unauthorized request"); 
+    ///     println!("Unauthorized request");
     /// }
     /// ```
     #[inline]
@@ -654,7 +656,9 @@ impl ParamsClone {
         for (ty, value) in &other.inner {
             // `or_insert_with` defers `clone_box()` until we know the entry
             // is vacant — `or_insert` would eagerly clone and discard.
-            self.inner.entry(*ty).or_insert_with(|| (**value).clone_box());
+            self.inner
+                .entry(*ty)
+                .or_insert_with(|| (**value).clone_box());
         }
     }
 
@@ -679,9 +683,9 @@ impl ParamsClone {
         for (ty, value) in &other.inner {
             // If the type is already present, we replace it with the new value
             self.inner.insert(*ty, (**value).clone_box());
-        } 
-    } 
-} 
+        }
+    }
+}
 
 impl Clone for ParamsClone {
     #[inline]
@@ -691,7 +695,9 @@ impl Clone for ParamsClone {
         // `<Box<dyn ParamValue> as Clone>::clone` (defined just above the
         // ParamsClone struct). Faster than rebuild-via-`insert()` because
         // it skips per-entry hash-and-probe and load-factor bookkeeping.
-        ParamsClone { inner: self.inner.clone() }
+        ParamsClone {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -706,16 +712,16 @@ impl fmt::Display for ParamsClone {
         }
         write!(f, "])")
     }
-} 
+}
 
 impl fmt::Debug for ParamsClone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let types: Vec<_> = self.inner.keys().collect();
         f.debug_struct("ParamsClone")
-         .field("types", &types)
-         .finish()
+            .field("types", &types)
+            .finish()
     }
-} 
+}
 
 impl Default for ParamsClone {
     fn default() -> Self {
@@ -808,7 +814,7 @@ impl LocalsClone {
     /// }
     /// ```
     #[inline]
-    pub fn get_mut<T: ParamValue>(&mut self, key: &str) -> Option<&mut T> { 
+    pub fn get_mut<T: ParamValue>(&mut self, key: &str) -> Option<&mut T> {
         self.inner
             .get_mut(key)
             .and_then(|boxed| (&mut **boxed as &mut dyn Any).downcast_mut::<T>())
@@ -871,8 +877,12 @@ impl LocalsClone {
 
     /// Exports a param value to the locals storage with the given key.
     /// The value must implement Clone. Does nothing if the param doesn't exist.
-    pub fn export_param<T: ParamValue + Clone>(&mut self, params: &ParamsClone, key: impl Into<String>) {
-        if let Some(value) = params.get::<T>() { 
+    pub fn export_param<T: ParamValue + Clone>(
+        &mut self,
+        params: &ParamsClone,
+        key: impl Into<String>,
+    ) {
+        if let Some(value) = params.get::<T>() {
             self.set(key, (*value).clone());
         }
     }
@@ -938,15 +948,17 @@ impl LocalsClone {
             // If the key is already present, we replace it with the new value
             self.inner.insert((*key).clone(), (**value).clone_box());
         }
-    } 
-} 
+    }
+}
 
 impl Clone for LocalsClone {
     #[inline]
     fn clone(&self) -> Self {
         // Delegates to the underlying HashMap's `Clone` impl — see the
         // ParamsClone counterpart above for the rationale.
-        LocalsClone { inner: self.inner.clone() }
+        LocalsClone {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -955,22 +967,20 @@ impl fmt::Display for LocalsClone {
         let keys: Vec<&str> = self.inner.keys().map(String::as_str).collect();
         write!(f, "LocalsClone(keys={:?})", keys)
     }
-} 
+}
 
 impl fmt::Debug for LocalsClone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let keys: Vec<&str> = self.inner.keys().map(String::as_str).collect();
-        f.debug_struct("LocalsClone")
-         .field("keys", &keys)
-         .finish()
+        f.debug_struct("LocalsClone").field("keys", &keys).finish()
     }
-} 
+}
 
 impl Default for LocalsClone {
     fn default() -> Self {
         Self::new()
     }
-} 
+}
 
 /// Helper function to merge two `HashMap<K, V>` without overwriting existing entries in `a`.
 ///
@@ -999,7 +1009,7 @@ where
     for (key, value) in b {
         a.entry(key.clone()).or_insert_with(|| value.clone());
     }
-} 
+}
 
 // Tests for the `extensions` module
 #[cfg(test)]
@@ -1044,7 +1054,9 @@ mod tests {
     fn test_params_get_mut() {
         let mut p = ParamsClone::default();
         p.set(10i32);
-        if let Some(v) = p.get_mut::<i32>() { *v += 5; }
+        if let Some(v) = p.get_mut::<i32>() {
+            *v += 5;
+        }
         assert_eq!(p.get::<i32>(), Some(&15));
     }
 
@@ -1078,7 +1090,9 @@ mod tests {
     fn test_locals_get_mut_and_take() {
         let mut l = LocalsClone::default();
         l.set("vec", vec![1, 2, 3]);
-        if let Some(v) = l.get_mut::<Vec<i32>>("vec") { v.push(4); }
+        if let Some(v) = l.get_mut::<Vec<i32>>("vec") {
+            v.push(4);
+        }
         assert_eq!(l.get::<Vec<i32>>("vec"), Some(&vec![1, 2, 3, 4]));
         let v = l.take::<Vec<i32>>("vec").unwrap();
         assert_eq!(v, vec![1, 2, 3, 4]);
@@ -1153,8 +1167,8 @@ mod tests {
         let val = l.take::<i32>("foo").unwrap();
         assert_eq!(val, 123);
         assert!(l.get::<i32>("foo").is_none());
-    } 
-        #[test]
+    }
+    #[test]
     fn test_paramsclone_clone_preserves_entries() {
         let mut original = ParamsClone::default();
         original.set(String::from("foo"));
@@ -1199,5 +1213,5 @@ mod tests {
         // Original remains unaffected
         assert_eq!(original.get::<i32>("counter"), Some(&1));
         assert_eq!(cloned.get::<i32>("counter"), Some(&2));
-    } 
-} 
+    }
+}

@@ -1,9 +1,9 @@
+use super::value::Value;
 #[cfg(feature = "no_std")]
 use crate::prelude::*;
-use super::value::Value;
 
 /// Key-Value Pair returned by iterators.
-/// 
+///
 /// This struct holds either owned or borrowed key-value pairs depending on
 /// whether it was created from an owned or borrowed iterator.
 pub enum KVP<'a> {
@@ -12,15 +12,15 @@ pub enum KVP<'a> {
         /// The key of the key-value pair
         key: Value,
         /// The value of the key-value pair
-        value: Value
+        value: Value,
     },
     /// A borrowed key-value pair where the value is a reference to an existing `Value`
     Borrowed {
         /// The key of the key-value pair (owned since keys are often computed)
         key: Value,
         /// Reference to the value in the key-value pair
-        value: &'a Value
-    }
+        value: &'a Value,
+    },
 }
 
 impl<'a> KVP<'a> {
@@ -29,9 +29,9 @@ impl<'a> KVP<'a> {
     /// # Examples
     ///
     /// ```
-    /// use akari::Value; 
-    /// use akari::KVP; 
-    /// 
+    /// use akari::Value;
+    /// use akari::KVP;
+    ///
     /// let kvp = KVP::Owned { key: Value::Numerical(0.0), value: Value::Boolean(true) };
     /// assert!(matches!(kvp.key(), Value::Numerical(0.0)));
     /// ```
@@ -47,9 +47,9 @@ impl<'a> KVP<'a> {
     /// # Examples
     ///
     /// ```
-    /// use akari::Value; 
-    /// use akari::KVP; 
-    /// 
+    /// use akari::Value;
+    /// use akari::KVP;
+    ///
     /// let kvp = KVP::Owned { key: Value::Numerical(0.0), value: Value::Boolean(true) };
     /// assert!(matches!(kvp.value(), Value::Boolean(true)));
     /// ```
@@ -65,12 +65,12 @@ impl<'a> KVP<'a> {
     /// # Examples
     ///
     /// ```
-    /// use akari::Value; 
-    /// use akari::KVP; 
-    /// 
-    /// let kvp = KVP::Borrowed { 
-    ///     key: Value::Numerical(0.0), 
-    ///     value: &Value::Boolean(true) 
+    /// use akari::Value;
+    /// use akari::KVP;
+    ///
+    /// let kvp = KVP::Borrowed {
+    ///     key: Value::Numerical(0.0),
+    ///     value: &Value::Boolean(true)
     /// };
     /// let (key, value) = kvp.into_owned();
     /// assert!(matches!(key, Value::Numerical(0.0)));
@@ -92,12 +92,12 @@ impl<'a> KVP<'a> {
 /// # Examples
 ///
 /// ```
-/// use akari::Value; 
-/// use akari::KVP; 
-/// 
+/// use akari::Value;
+/// use akari::KVP;
+///
 /// let list = Value::List(vec![Value::Numerical(1.0), Value::Boolean(true)]);
 /// let mut iter = list.iter();
-/// 
+///
 /// if let Some(KVP::Borrowed { key, value }) = iter.next() {
 ///     assert!(matches!(key, Value::Numerical(0.0)));
 ///     assert!(matches!(value, Value::Numerical(1.0)));
@@ -120,12 +120,12 @@ pub struct IterBorrowed<'a> {
 /// # Examples
 ///
 /// ```
-/// use akari::Value; 
-/// use akari::KVP; 
-/// 
+/// use akari::Value;
+/// use akari::KVP;
+///
 /// let list = Value::List(vec![Value::Numerical(1.0), Value::Boolean(true)]);
 /// let mut iter = list.into_iter();
-/// 
+///
 /// if let Some(KVP::Owned { key, value }) = iter.next() {
 ///     assert!(matches!(key, Value::Numerical(0.0)));
 ///     assert!(matches!(value, Value::Numerical(1.0)));
@@ -155,7 +155,7 @@ impl<'a> Iterator for IterBorrowed<'a> {
                 } else {
                     None
                 }
-            }, 
+            }
             Value::List(values) => {
                 if self.pos < values.len() {
                     let key = Value::Numerical(self.pos as f64);
@@ -165,13 +165,13 @@ impl<'a> Iterator for IterBorrowed<'a> {
                 } else {
                     None
                 }
-            },
+            }
             Value::Dict(map) => {
                 // Initialize dict_keys if needed
                 if self.dict_keys.is_none() {
                     self.dict_keys = Some(map.keys().collect());
                 }
-                
+
                 if let Some(keys) = &self.dict_keys {
                     if self.pos < keys.len() {
                         let key = keys[self.pos];
@@ -189,7 +189,7 @@ impl<'a> Iterator for IterBorrowed<'a> {
                 } else {
                     None
                 }
-            },
+            }
             Value::None => None,
         }
     }
@@ -210,7 +210,7 @@ impl Iterator for IterOwned {
                 } else {
                     None
                 }
-            }, 
+            }
             Value::List(values) => {
                 if self.pos < values.len() {
                     let key = Value::Numerical(self.pos as f64);
@@ -221,13 +221,13 @@ impl Iterator for IterOwned {
                 } else {
                     None
                 }
-            },
+            }
             Value::Dict(map) => {
                 // Initialize dict_keys if needed
                 if self.dict_keys.is_none() {
                     self.dict_keys = Some(map.keys().cloned().collect());
                 }
-                
+
                 if let Some(keys) = &self.dict_keys {
                     if self.pos < keys.len() {
                         let key = keys[self.pos].clone();
@@ -244,7 +244,7 @@ impl Iterator for IterOwned {
                 } else {
                     None
                 }
-            },
+            }
             Value::None => None,
         }
     }
@@ -264,13 +264,13 @@ impl Value {
     ///
     /// Iterating over a list:
     /// ```
-    /// use akari::Value; 
-    /// 
+    /// use akari::Value;
+    ///
     /// let list = Value::List(vec![
     ///     Value::Numerical(1.0),
     ///     Value::Numerical(2.0)
     /// ]);
-    /// 
+    ///
     /// for pair in list.iter() {
     ///     println!("Key: {:?}, Value: {:?}", pair.key(), pair.value());
     /// }
@@ -287,7 +287,7 @@ impl Value {
     /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Boolean(true));
     /// let dict = Value::Dict(map);
-    /// 
+    ///
     /// for pair in dict.iter() {
     ///     println!("Key: {:?}, Value: {:?}", pair.key(), pair.value());
     /// }
@@ -300,7 +300,7 @@ impl Value {
             pos: 0,
             dict_keys: None,
         }
-    } 
+    }
 
     /// Creates an owned iterator that consumes this `Value`.
     ///
@@ -315,13 +315,13 @@ impl Value {
     ///
     /// Consuming a list:
     /// ```
-    /// use akari::Value; 
-    /// 
+    /// use akari::Value;
+    ///
     /// let list = Value::List(vec![
     ///     Value::Numerical(1.0),
     ///     Value::Numerical(2.0)
     /// ]);
-    /// 
+    ///
     /// for pair in list.iter_owned() {
     ///     println!("Key: {:?}, Value: {:?}", pair.key(), pair.value());
     /// }
@@ -330,13 +330,13 @@ impl Value {
     ///
     /// Consuming a dictionary:
     /// ```
-    /// use akari::Value; 
+    /// use akari::Value;
     /// use akari::hash::HashMap;
-    /// 
+    ///
     /// let mut map = HashMap::default();
     /// map.insert("key".to_string(), Value::Boolean(true));
     /// let dict = Value::Dict(map);
-    /// 
+    ///
     /// for pair in dict.iter_owned() {
     ///     println!("Key: {:?}, Value: {:?}", pair.key(), pair.value());
     /// }
@@ -348,8 +348,8 @@ impl Value {
             pos: 0,
             dict_keys: None,
         }
-    } 
-} 
+    }
+}
 
 // Implement IntoIterator for &Value
 impl<'a> IntoIterator for &'a Value {
@@ -367,6 +367,6 @@ impl IntoIterator for Value {
     type IntoIter = IterOwned;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iter_owned() 
+        self.iter_owned()
     }
-} 
+}

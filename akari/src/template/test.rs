@@ -1,19 +1,20 @@
-use std::collections::HashMap; 
+use std::collections::HashMap;
+extern crate self as akari;
 
-#[cfg(feature = "object_macro")] 
+#[cfg(feature = "object_macro")]
 use crate::object;
 
-use crate::{Value as Obj, TemplateManager};
+use crate::{TemplateManager, Value as Obj};
 use std::fs;
 use std::path::Path;
-#[test] 
+#[test]
 fn test() -> Result<(), Box<dyn std::error::Error>> {
     // Set up test templates directory
     let template_dir = Path::new("./test_temp/templates_test");
     if !template_dir.exists() {
         fs::create_dir(template_dir)?;
     }
-    
+
     // Create a base layout template
     let base_layout = r#"<!DOCTYPE html>
 <html>
@@ -43,9 +44,9 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
     </footer>
 </body>
 </html>"#;
-    
+
     fs::write(template_dir.join("base.html"), base_layout)?;
-    
+
     // Create a page template that extends the base
     let page_template = r#"-[ template "/base.html" ]-
 
@@ -82,19 +83,28 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
 
 -[ insert "/base.html" ]- 
 -[ endblock ]-"#;
-    
+
     fs::write(template_dir.join("home.html"), page_template)?;
-    
+
     // Initialize the template manager
     let template_manager = TemplateManager::new(template_dir);
-    
+
     // Set up template data
     let mut data = HashMap::new();
-    data.insert("title".to_string(), Obj::Str("My Website - Home".to_string()));
-    data.insert("page_title".to_string(), Obj::Str("Welcome to My Website".to_string()));
+    data.insert(
+        "title".to_string(),
+        Obj::Str("My Website - Home".to_string()),
+    );
+    data.insert(
+        "page_title".to_string(),
+        Obj::Str("Welcome to My Website".to_string()),
+    );
     data.insert("show_message".to_string(), Obj::Boolean(true));
-    data.insert("message".to_string(), Obj::Str("Thank you for visiting!".to_string()));
-    
+    data.insert(
+        "message".to_string(),
+        Obj::Str("Thank you for visiting!".to_string()),
+    );
+
     // Create a list for the for-loop
     let items = vec![
         Obj::Str("First item".to_string()),
@@ -102,25 +112,25 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
         Obj::Str("Third item".to_string()),
     ];
     data.insert("items".to_string(), Obj::List(items));
-    
+
     // Render the template
     let result = template_manager.render("home.html", &data)?;
     println!("Rendered Template:\n{}", result);
-    
+
     // Clean up test directory
     // fs::remove_dir_all(template_dir)?;
-    
-    Ok(())
-} 
 
-#[test] 
-fn test2() -> Result<(), Box<dyn std::error::Error>>{ 
+    Ok(())
+}
+
+#[test]
+fn test2() -> Result<(), Box<dyn std::error::Error>> {
     // Set up test templates directory
     let template_dir = Path::new("./test_temp/templates_test2");
     if !template_dir.exists() {
         fs::create_dir(template_dir)?;
-    } 
-    
+    }
+
     // Create a base layout template
     let base_layout = r#"<!DOCTYPE html>
 <html>
@@ -150,9 +160,9 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     </footer>
 </body>
 </html>"#;
-    
+
     fs::write(template_dir.join("base.html"), base_layout)?;
-    
+
     // Create a page template that extends the base
     let page_template = r#"-[ template "/base.html" ]-
 
@@ -187,19 +197,28 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
     </ul>
 </div>
 -[ endblock ]-"#;
-    
+
     fs::write(template_dir.join("home.html"), page_template)?;
-    
+
     // Initialize the template manager
     let template_manager = TemplateManager::new(template_dir);
-    
+
     // Set up template data
     let mut data = HashMap::new();
-    data.insert("title".to_string(), Obj::Str("My Website - Home".to_string()));
-    data.insert("page_title".to_string(), Obj::Str("Welcome to My Website".to_string()));
+    data.insert(
+        "title".to_string(),
+        Obj::Str("My Website - Home".to_string()),
+    );
+    data.insert(
+        "page_title".to_string(),
+        Obj::Str("Welcome to My Website".to_string()),
+    );
     data.insert("show_message".to_string(), Obj::Boolean(true));
-    data.insert("message".to_string(), Obj::Str("Thank you for visiting!".to_string()));
-    
+    data.insert(
+        "message".to_string(),
+        Obj::Str("Thank you for visiting!".to_string()),
+    );
+
     // Create a list for the for-loop
     let items = vec![
         Obj::Str("First item".to_string()),
@@ -207,39 +226,42 @@ fn test2() -> Result<(), Box<dyn std::error::Error>>{
         Obj::Str("Third item".to_string()),
     ];
     data.insert("items".to_string(), Obj::List(items));
-    
+
     // Render the template
     let result = template_manager.render("home.html", &data)?;
     println!("Rendered Template:\n{}", result);
-    
+
     // Clean up test directory
     // fs::remove_dir_all(template_dir)?;
-    
-    Ok(()) 
+
+    Ok(())
 }
 
-#[cfg(feature = "object_macro")] 
-#[test] 
-fn test3() -> Result<(), Box<dyn std::error::Error>>{ 
-    use crate::Value; 
+#[cfg(feature = "object_macro")]
+#[test]
+fn test3() -> Result<(), Box<dyn std::error::Error>> {
+    use crate::Value;
     let page_template = r#"
 <link rel="stylesheet" href="style.css">
 <meta name="description" content="pageprop.desc">
 
 <h1>-[ output pageprop["title"] ]-</h1>
-"#; 
-        
-        // Initialize the template manager
-        let template_manager = TemplateManager::new(Path::new("./test_temp/templates_test3"));
-        
-        // Set up template data
-        let mut data = HashMap::new();
-        data.insert("pageprop".to_string(), object!({desc: "My Website - Home", title: "Welcome to My Website"})); 
-        data.insert("title".to_string(), object!("111")); 
-        
-        // Render the template
-        let result = template_manager.render_string(page_template.to_string(), &data)?;
-        println!("Rendered Template:\n{}", result);
-        
-        Ok(()) 
-} 
+"#;
+
+    // Initialize the template manager
+    let template_manager = TemplateManager::new(Path::new("./test_temp/templates_test3"));
+
+    // Set up template data
+    let mut data = HashMap::new();
+    data.insert(
+        "pageprop".to_string(),
+        object!({desc: "My Website - Home", title: "Welcome to My Website"}),
+    );
+    data.insert("title".to_string(), object!("111"));
+
+    // Render the template
+    let result = template_manager.render_string(page_template.to_string(), &data)?;
+    println!("Rendered Template:\n{}", result);
+
+    Ok(())
+}

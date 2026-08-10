@@ -1,80 +1,80 @@
-use super::Value as Obj; 
+use super::Value as Obj;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Token { 
+pub enum Token {
     // Directives and Block Structure
-    TemplateKeyword,         // e.g., "template"
-    InsertKeyword,           // e.g., "insert" 
-    BlockKeyword,            // e.g., "block"
-    EndBlockKeyword,         // e.g., "endblock"
-    ExportKeyword,           // e.g., "export"
-    PlaceholderKeyword,      // e.g., "placeholder"
-    
+    TemplateKeyword,    // e.g., "template"
+    InsertKeyword,      // e.g., "insert"
+    BlockKeyword,       // e.g., "block"
+    EndBlockKeyword,    // e.g., "endblock"
+    ExportKeyword,      // e.g., "export"
+    PlaceholderKeyword, // e.g., "placeholder"
+
     // Control Flow and Loop Constructs
-    LetKeyword,              // e.g., "let"
-    ForKeyword,              // e.g., "for"
-    InKeyword,               // e.g., "in"
-    IfKeyword,               // e.g., "if"
-    MatchKeyword,            // e.g., "match" 
-    CaseKeyword,             // e.g., "case" 
-    OutputKeyword,           // e.g., "output"
-    EndIfKeyword,            // e.g., "endif"
-    EndForKeyword,           // e.g., "endfor"
-    EndMatchKeyword,         // e.g., "endmatch" 
-    EndCaseKeyword,          // e.g., "endcase" 
-    WhileKeyword,            // e.g., "while"
-    EndWhileKeyword,         // e.g., "endwhile"
-    DelKeyword,              // e.g., "del" 
-    
+    LetKeyword,      // e.g., "let"
+    ForKeyword,      // e.g., "for"
+    InKeyword,       // e.g., "in"
+    IfKeyword,       // e.g., "if"
+    MatchKeyword,    // e.g., "match"
+    CaseKeyword,     // e.g., "case"
+    OutputKeyword,   // e.g., "output"
+    EndIfKeyword,    // e.g., "endif"
+    EndForKeyword,   // e.g., "endfor"
+    EndMatchKeyword, // e.g., "endmatch"
+    EndCaseKeyword,  // e.g., "endcase"
+    WhileKeyword,    // e.g., "while"
+    EndWhileKeyword, // e.g., "endwhile"
+    DelKeyword,      // e.g., "del"
+
     // Literals and Identifiers
-    Identifier(String),      // variable names or user-defined names
-    Object(Obj),          // literal number, string, boolean, list and object 
-    HtmlContent(String),     // HTML content such as "<script ...>...</script>"
-    
-    // Operators and Punctuation 
-    Dot,                  // . (dot operator for object access) 
+    Identifier(String),  // variable names or user-defined names
+    Object(Obj),         // literal number, string, boolean, list and object
+    HtmlContent(String), // HTML content such as "<script ...>...</script>"
+
+    // Operators and Punctuation
+    Dot, // . (dot operator for object access)
 
     // Assignment Operators
-    Assignment,              // =
-    PlusAssignment,          // +=
-    MinusAssignment,         // -=
-    MultiplyAssignment,      // *=
-    DivideAssignment,        // /=
-    ModulusAssignment,       // %=
-    
+    Assignment,         // =
+    PlusAssignment,     // +=
+    MinusAssignment,    // -=
+    MultiplyAssignment, // *=
+    DivideAssignment,   // /=
+    ModulusAssignment,  // %=
+
     // Increment/Decrement Operators
-    Increment,               // ++
-    Decrement,               // --
-    
+    Increment, // ++
+    Decrement, // --
+
     // Arithmetic Operators
-    Plus,                    // +
-    Minus,                   // -
-    Multiply,                // *
-    Divide,                  // /
-    Modulus,                 // %
-    Exponent,                // ** (or ^, if you choose)
-    
+    Plus,     // +
+    Minus,    // -
+    Multiply, // *
+    Divide,   // /
+    Modulus,  // %
+    Exponent, // ** (or ^, if you choose)
+
     // Comparison Operators
-    EqualsEquals,            // ==
-    NotEquals,               // !=
-    LessThan,                // <
-    LessThanEquals,          // <=
-    GreaterThan,             // >
-    GreaterThanEquals,       // >=
-    
+    EqualsEquals,      // ==
+    NotEquals,         // !=
+    LessThan,          // <
+    LessThanEquals,    // <=
+    GreaterThan,       // >
+    GreaterThanEquals, // >=
+
     // Logical Operators
-    LogicalAnd,              // && (or "and")
-    LogicalOr,               // || (or "or")
-    LogicalNot,              // !  (or "not")
-    
+    LogicalAnd, // && (or "and")
+    LogicalOr,  // || (or "or")
+    LogicalNot, // !  (or "not")
+
     // Grouping and Delimiters
-    LeftParen,               // (
-    RightParen,              // )
-    LeftSquareBracket,       // [
-    RightSquareBracket,      // ]
-    
+    LeftParen,          // (
+    RightParen,         // )
+    LeftSquareBracket,  // [
+    RightSquareBracket, // ]
+
     // End of Statement
-    EndOfStatement,          // Marks end of a directive or statement 
+    EndOfStatement, // Marks end of a directive or statement
 }
 
 /// The Lexer struct holds the input string (our template source code)
@@ -82,7 +82,7 @@ pub enum Token {
 pub struct Lexer {
     input: String,
     pos: usize,
-} 
+}
 
 impl Lexer {
     /// Creates a new Lexer instance from a given input.
@@ -258,7 +258,7 @@ impl Lexer {
                 ')' => Token::RightParen,
                 '[' => Token::LeftSquareBracket,
                 ']' => Token::RightSquareBracket,
-                '.' => Token::Dot, 
+                '.' => Token::Dot,
                 // For any unrecognized character, we simply return it as an identifier.
                 _ => Token::Identifier(ch.to_string()),
             }
@@ -349,8 +349,8 @@ impl Lexer {
         }
         // Map reserved words to their corresponding token variants.
         match word {
-            "template" => Token::TemplateKeyword, 
-            "insert" => Token::InsertKeyword, 
+            "template" => Token::TemplateKeyword,
+            "insert" => Token::InsertKeyword,
             "block" => Token::BlockKeyword,
             "endblock" => Token::EndBlockKeyword,
             "export" => Token::ExportKeyword,
@@ -365,10 +365,10 @@ impl Lexer {
             "while" => Token::WhileKeyword,
             "endwhile" => Token::EndWhileKeyword,
             "del" => Token::DelKeyword,
-            "match" => Token::MatchKeyword, 
-            "endmatch" => Token::EndMatchKeyword, 
-            "case" => Token::CaseKeyword, 
-            "endcase" => Token::EndCaseKeyword, 
+            "match" => Token::MatchKeyword,
+            "endmatch" => Token::EndMatchKeyword,
+            "case" => Token::CaseKeyword,
+            "endcase" => Token::EndCaseKeyword,
             _ => Token::Identifier(word.to_string()),
         }
     }
@@ -383,8 +383,8 @@ impl Lexer {
 /// # Example
 ///
 /// ```rust
-/// use akari::{tokenize, Token}; 
-/// use akari::Value; 
+/// use akari::{tokenize, Token};
+/// use akari::Value;
 /// let input = r#"
 /// -[ template "template.html" ]-
 /// -[ block header ]-
@@ -402,8 +402,8 @@ impl Lexer {
 /// -[ endblock ]-
 /// "#;
 ///
-/// let tokens = tokenize(input); 
-/// println!("{:?}", tokens); 
+/// let tokens = tokenize(input);
+/// println!("{:?}", tokens);
 /// // `tokens` now contains a mixture of HtmlContent tokens and directive tokens,
 /// // with each directive ending with an EndOfStatement token.
 /// ```
@@ -432,11 +432,11 @@ pub fn tokenize<S: Into<String>>(input: S) -> Vec<Token> {
         }
     }
     tokens
-} 
+}
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
-    use super::*; 
+    use super::*;
 
     #[test]
     fn test_tokenize() {
@@ -456,7 +456,7 @@ mod tests {
             -[ endfor ]-
         -[ endblock ]- 
         "#;
-        let tokens = tokenize(input); 
-        println!("{:?}", tokens); 
-    } 
-} 
+        let tokens = tokenize(input);
+        println!("{:?}", tokens);
+    }
+}

@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "no_std", no_std)]
 
 extern crate alloc;
+extern crate self as akari;
 
 /// Re-exports of `alloc` essentials for `no_std` builds. In `std` mode these
 /// are already in the prelude, so the module is omitted entirely.
@@ -23,6 +24,8 @@ compile_error!("the `bin` feature requires std and is incompatible with `no_std`
 #[cfg(feature = "hash")]
 pub mod hash;
 
+pub mod fraction;
+
 // Export public APIs
 #[cfg(feature = "dynamic")]
 mod object;
@@ -30,18 +33,16 @@ mod object;
 pub use object::*;
 
 #[cfg(feature = "template")]
-mod template; 
-#[cfg(feature = "template")]
-pub use template::parse::{Token, tokenize};
+mod template;
 #[cfg(feature = "template")]
 pub use template::compile::compile;
 #[cfg(feature = "template")]
-pub use template::template_manager::TemplateManager; 
+pub use template::parse::{Token, tokenize};
+#[cfg(feature = "template")]
+pub use template::template_manager::TemplateManager;
 
 #[cfg(feature = "object_macro")]
-pub use akari_macro::object; 
+pub use akari_macro::object;
 
 #[cfg(any(feature = "extension"))]
-pub mod extensions; 
-
-
+pub mod extensions;

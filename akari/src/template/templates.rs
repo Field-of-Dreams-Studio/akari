@@ -1,11 +1,11 @@
-use std::collections::HashMap; 
-use std::fs; 
-use std::io::Read; 
-use crate::Value;
 use crate::TemplateManager;
+use crate::Value;
+use std::collections::HashMap;
+use std::fs;
+use std::io::Read;
 
-use super::parse; 
-use super::compile; 
+use super::compile;
+use super::parse;
 
 #[macro_export]
 macro_rules! insert_entry {
@@ -56,12 +56,12 @@ macro_rules! parse_string {
         )*
         render_bytes(&bytes, &mut map)
     }};
-} 
+}
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
-    use super::*; 
-    use crate::object; 
+    use super::*;
+    use crate::object;
 
     #[test]
     fn test_tokenize() {
@@ -80,13 +80,12 @@ mod tests {
                 -[ a = a + 1 ]-
             -[ endfor ]-
         -[ endblock ]- 
-        "#; 
-        let mut data = HashMap::new(); 
-        data.insert("list".to_string(), object!(vec![        object!("a"), 
-        object!("b"), 
-        object!("c")])); 
-        // println!("{:?}", render_string(input, data)); 
-    } 
-} 
- 
- 
+        "#;
+        let mut data = HashMap::new();
+        data.insert(
+            "list".to_string(),
+            object!(vec![object!("a"), object!("b"), object!("c")]),
+        );
+        // println!("{:?}", render_string(input, data));
+    }
+}

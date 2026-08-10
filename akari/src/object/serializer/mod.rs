@@ -27,13 +27,13 @@
 //! This keeps parser/serializer APIs conceptually aligned while avoiding forced
 //! stateful serializer machinery where it is not needed.
 
-mod trait_def;
 mod error;
-mod writer;
 pub mod json;
+mod trait_def;
+mod writer;
 
 // Re-export the trait and error types
-pub use trait_def::ValueSerializer;
 pub use error::{SerializeError, SerializeErrorKind};
-pub use writer::BinWriter;
 pub use json::JsonSerializer;
+pub use trait_def::ValueSerializer;
+pub use writer::BinWriter;

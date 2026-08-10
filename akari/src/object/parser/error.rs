@@ -117,7 +117,9 @@ impl fmt::Display for ParseError {
                 }
                 Ok(())
             }?,
-            ParseErrorKind::InvalidEncoding(msg) => write!(f, "invalid encoding ({msg}) at pos {}", self.pos)?,
+            ParseErrorKind::InvalidEncoding(msg) => {
+                write!(f, "invalid encoding ({msg}) at pos {}", self.pos)?
+            }
             ParseErrorKind::InvalidNumber => write!(f, "invalid number at pos {}", self.pos)?,
             ParseErrorKind::DepthLimit => write!(f, "depth limit exceeded at pos {}", self.pos)?,
             ParseErrorKind::Message(msg) => write!(f, "{msg} at pos {}", self.pos)?,

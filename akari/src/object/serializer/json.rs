@@ -2,13 +2,13 @@
 //!
 //! Compact JSON serializer for Akari `Value`.
 
+use crate::object::Value;
 #[cfg(feature = "no_std")]
 use crate::prelude::*;
-use crate::object::Value;
 
+use super::ValueSerializer;
 use super::error::SerializeError;
 use super::writer::BinWriter;
-use super::ValueSerializer;
 
 /// JSON serializer for Akari values.
 #[derive(Debug, Clone, Copy, Default)]
@@ -17,7 +17,11 @@ pub struct JsonSerializer;
 impl JsonSerializer {
     const MAX_DEPTH: usize = 512;
 
-    fn serialize_value(writer: &mut BinWriter, value: &Value, depth: usize) -> Result<(), SerializeError> {
+    fn serialize_value(
+        writer: &mut BinWriter,
+        value: &Value,
+        depth: usize,
+    ) -> Result<(), SerializeError> {
         match value {
             Value::None => {
                 writer.write_str("null");
@@ -33,10 +37,10 @@ impl JsonSerializer {
             }
             Value::Numerical(n) => {
                 if !n.is_finite() {
-                    return Err(
-                        SerializeError::invalid_value("NaN or Infinity is not valid JSON number")
-                            .with_context(n.to_string()),
-                    );
+                    return Err(SerializeError::invalid_value(
+                        "NaN or Infinity is not valid JSON number",
+                    )
+                    .with_context(n.to_string()));
                 }
                 writer.write_str(&n.to_string());
                 Ok(())
@@ -85,9 +89,9 @@ impl ValueSerializer<str> for JsonSerializer {
     fn serialize_one(value: &Value) -> Result<Self::Output, Self::Error> {
         let mut writer = BinWriter::new();
         Self::serialize_value(&mut writer, value, 0)?;
-        writer
-            .into_string()
-            .map_err(|e| SerializeError::message("serializer produced invalid UTF-8").with_context(e.to_string()))
+        writer.into_string().map_err(|e| {
+            SerializeError::message("serializer produced invalid UTF-8").with_context(e.to_string())
+        })
     }
 
     fn serialize_buf(value: &Value, writer: &mut BinWriter) -> Result<(), Self::Error> {
@@ -134,11 +138,11 @@ pub fn serialize_string(writer: &mut BinWriter, s: &str) -> Result<(), Serialize
 
     for c in s.chars() {
         match c {
-            '"' => writer.write_str("\\\""),  // Escape double quotes
-            '\\' => writer.write_str("\\\\"), // Escape backslashes
-            '\n' => writer.write_str("\\n"),  // Escape newlines
-            '\r' => writer.write_str("\\r"),  // Escape carriage returns
-            '\t' => writer.write_str("\\t"),  // Escape tabs
+            '"' => writer.write_str("\\\""),       // Escape double quotes
+            '\\' => writer.write_str("\\\\"),      // Escape backslashes
+            '\n' => writer.write_str("\\n"),       // Escape newlines
+            '\r' => writer.write_str("\\r"),       // Escape carriage returns
+            '\t' => writer.write_str("\\t"),       // Escape tabs
             '\u{0008}' => writer.write_str("\\b"), // Escape backspace
             '\u{000C}' => writer.write_str("\\f"), // Escape form feed
             _ if c.is_control() => {
@@ -228,10 +232,7 @@ mod tests {
             JsonSerializer::serialize_one(&Value::Boolean(false)).unwrap(),
             "false"
         );
-        assert_eq!(
-            JsonSerializer::serialize_one(&Value::None).unwrap(),
-            "null"
-        );
+        assert_eq!(JsonSerializer::serialize_one(&Value::None).unwrap(), "null");
     }
 
     #[test]
