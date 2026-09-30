@@ -37,7 +37,9 @@ impl Fraction {
     /// Creates a reduced fraction from a numerator and an already-positive denominator.
     ///
     /// Unlike [`new`](Self::new), this accepts denominators through the full `u64`
-    /// range and cannot fail due to a zero or negative denominator.
+    /// range and cannot fail due to a zero or negative denominator.  Panics when the
+    /// normalized numerator cannot be represented by `i64` (the latter is only possible for 
+    /// `i64::MIN / -1`).
     pub fn new_nonzero(numer: i64, denom: NonZeroU64) -> Self {
         let g = gcd(numer.unsigned_abs(), denom.get());
         let numer_magnitude = numer.unsigned_abs() / g;
@@ -223,20 +225,25 @@ impl Fraction {
         numer /= g;
         denom /= g;
 
-        let numer = Self::signed_numerator(numer, negative)?;
+        let numer = Self::signed_numerator(numer, negative).ok()?;
         let denom = NonZeroU64::new(u64::try_from(denom).ok()?)?;
         Some(Self { numer, denom })
     }
 
-    fn signed_numerator(magnitude: u128, negative: bool) -> Option<i64> {
+    /// Creates a signed i64 numerator from u128 magnitude and sign.
+    /// Returns None if the magnitude is too large to fit in an i64.
+    fn signed_numerator(magnitude: u128, negative: bool) -> Result<i64, ()> {
         if negative {
             if magnitude == 1_u128 << 63 {
-                Some(i64::MIN)
+                Ok(i64::MIN)
             } else {
-                i64::try_from(magnitude).ok()?.checked_neg()
+                i64::try_from(magnitude)
+                    .map_err(|_| ())?
+                    .checked_neg()
+                    .ok_or(())
             }
         } else {
-            i64::try_from(magnitude).ok()
+            i64::try_from(magnitude).map_err(|_| ())
         }
     }
 }
