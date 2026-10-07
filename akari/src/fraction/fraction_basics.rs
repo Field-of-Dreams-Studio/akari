@@ -15,6 +15,7 @@
 /// Run this with:
 ///   cargo test --test fraction_basics
 use akari::Fraction;
+use core::num::NonZeroU64;
 
 // ─────────────────────────────────────────────────────────────────
 // 1. CONSTRUCTION: How to create a Fraction
@@ -61,6 +62,33 @@ fn test_fraction_construction_and_reduction() {
 fn test_fraction_zero_denominator() {
     assert_eq!(Fraction::try_new(5, 0), None);
     assert_eq!(Fraction::try_new(5, 2), Some(Fraction::new(5, 2)));
+}
+
+/// The representation handles the complete signed-input range without calling
+/// `i64::abs`, and exposes the positive denominator as an unsigned value.
+#[test]
+fn test_fraction_integer_boundaries_and_nonzero_denominator() {
+    let min_numerator = Fraction::new(i64::MIN, 1);
+    assert_eq!(min_numerator.numer(), i64::MIN);
+    assert_eq!(min_numerator.denom(), 1);
+
+    let min_denominator = Fraction::new(1, i64::MIN);
+    assert_eq!(min_denominator.numer(), -1);
+    assert_eq!(min_denominator.denom(), 1_u64 << 63);
+    assert_eq!(
+        min_denominator.denom_nonzero(),
+        NonZeroU64::new(1_u64 << 63).unwrap()
+    );
+
+    // Normalizing i64::MIN / -1 would require the unavailable positive i64 value 2^63.
+    assert_eq!(Fraction::try_new(i64::MIN, -1), None);
+
+    let full_width_denom = Fraction::new_nonzero(1, NonZeroU64::new(u64::MAX).unwrap());
+    assert_eq!(full_width_denom.numer(), 1);
+    assert_eq!(full_width_denom.denom(), u64::MAX);
+
+    let from_tuple: Fraction = (6, NonZeroU64::new(8).unwrap()).into();
+    assert_eq!(from_tuple, Fraction::new(3, 4));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -220,6 +248,17 @@ fn test_checked_operations() {
     let zero = Fraction::new(0, 1);
     assert_eq!(a.checked_div(zero), None);
     println!("checked_div by zero = {:?}", a.checked_div(zero)); // None
+
+    // Intermediates use wider integers, so reducible results do not overflow early.
+    assert_eq!(
+        Fraction::new(i64::MAX, 2).checked_mul(Fraction::new(2, i64::MAX)),
+        Some(Fraction::from_integer(1))
+    );
+
+    assert_eq!(
+        Fraction::from_integer(i64::MAX).checked_add(Fraction::from_integer(1)),
+        None
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -300,6 +339,8 @@ fn test_from_f64_bounded() {
     assert_eq!(Fraction::from_f64_bounded(f64::NAN, 100), None);
     assert_eq!(Fraction::from_f64_bounded(f64::INFINITY, 100), None);
     assert_eq!(Fraction::from_f64_bounded(f64::NEG_INFINITY, 100), None);
+    assert_eq!(Fraction::from_f64_bounded(0.5, 0), None);
+    assert_eq!(Fraction::from_f64_bounded(0.5, -1), None);
 }
 
 /// `from_f64(f)` — same as `from_f64_bounded` with `max_denom = 1_000_000`.
@@ -410,3 +451,98 @@ fn test_approx_f64() {
     let _ = Fraction::approx_f64(0.0);
     let _ = Fraction::approx_f64(-0.0);
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 7. 128-BIT INTERMEDIATE VALUES & OVERFLOW EXCEPTIONS
+// ─────────────────────────────────────────────────────────────────
+
+/// Intermediate arithmetic calculations can exceed 64-bit bounds (using 128-bit unsigned math),
+/// but successfully reduce to valid 64-bit fractions via GCD reduction.
+#[test]
+fn test_intermediate_128bit_values_reduced() {
+    // 1. Multiplication where intermediate numerator exceeds 64-bit i64::MAX (9_223_372_036_854_775_807),
+    //    intermediate numer = i64::MAX * 2 = 18_446_744_073_709_551_614 (> 64-bit i64::MAX).
+    //    Intermediate denom = 2 * i64::MAX = 18_446_744_073_709_551_614.
+    //    GCD reduction reduces it to 1/1.
+    let a = Fraction::new_nonzero(i64::MAX, NonZeroU64::new(2).unwrap());
+    let b = Fraction::new(2, i64::MAX);
+    assert_eq!(a * b, Fraction::new(1, 1));
+    assert_eq!(a.checked_mul(b), Some(Fraction::new(1, 1)));
+
+    // 2. Addition where intermediate numerator and denominator exceed u64::MAX (18_446_744_073_709_551_615):
+    //    f1 = i64::MAX / (u64::MAX / 2), f2 = i64::MAX / (u64::MAX / 2)
+    //    lhs and rhs in checked_add = i64::MAX * (u64::MAX / 2) = 8.507059e36 (> u64::MAX).
+    //    Intermediate numer = 1.7014118e37 (> u64::MAX).
+    //    Intermediate denom = (u64::MAX / 2)^2 = 8.507059e36 (> u64::MAX).
+    //    GCD reduction reduces it to 2/1.
+    let half_u64_max = NonZeroU64::new(u64::MAX / 2).unwrap();
+    let f1 = Fraction::new_nonzero(i64::MAX, half_u64_max);
+    let f2 = Fraction::new_nonzero(i64::MAX, half_u64_max);
+    assert_eq!(f1 + f2, Fraction::new(2, 1));
+    assert_eq!(f1.checked_add(f2), Some(Fraction::new(2, 1)));
+}
+
+/// Checked operations return `None` when reduced results exceed 64-bit representation
+/// or when intermediate values exceed 128-bit limits.
+#[test]
+fn test_intermediate_128bit_overflow_checked() {
+    // 1. Numerator overflow (> i64::MAX)
+    let max_i64 = Fraction::from_integer(i64::MAX);
+    let min_i64 = Fraction::from_integer(i64::MIN);
+    let two = Fraction::from_integer(2);
+    let one = Fraction::from_integer(1);
+
+    assert_eq!(max_i64.checked_mul(two), None);
+    assert_eq!(min_i64.checked_mul(two), None);
+    assert_eq!(max_i64.checked_add(one), None);
+    assert_eq!(min_i64.checked_sub(one), None);
+
+    // 2. Denominator overflow (> u64::MAX)
+    let max_u64_denom = Fraction::new_nonzero(1, NonZeroU64::new(u64::MAX).unwrap());
+    let half = Fraction::new(1, 2);
+    // Intermediate denom = u64::MAX * 2 (exceeds u64::MAX, fits in u128, but GCD cannot reduce below u64::MAX)
+    assert_eq!(max_u64_denom.checked_mul(half), None);
+
+    // 3. Intermediate 128-bit addition overflow (> u128::MAX)
+    //    lhs_magnitude = i64::MAX * u64::MAX ≈ 1.7014e38
+    //    rhs_magnitude = i64::MAX * u64::MAX ≈ 1.7014e38
+    //    lhs + rhs ≈ 3.4028e38 > u128::MAX (3.40282366920938463463374607431768211455e38)
+    let big_f1 = Fraction::new_nonzero(i64::MAX, NonZeroU64::new(u64::MAX).unwrap());
+    let big_f2 = Fraction::new_nonzero(i64::MAX, NonZeroU64::new(u64::MAX).unwrap());
+    assert_eq!(big_f1.checked_add(big_f2), None);
+}
+
+/// Standard operator overloads (+, -, *, /, neg) panic when results exceed 64-bit limits.
+#[test]
+#[should_panic(expected = "fraction multiplication overflowed its representation")]
+fn test_panic_on_mul_overflow() {
+    let _ = Fraction::from_integer(i64::MAX) * Fraction::from_integer(2);
+}
+
+#[test]
+#[should_panic(expected = "fraction addition overflowed its representation")]
+fn test_panic_on_add_overflow() {
+    let _ = Fraction::from_integer(i64::MAX) + Fraction::from_integer(1);
+}
+
+#[test]
+#[should_panic(expected = "fraction subtraction overflowed its representation")]
+fn test_panic_on_sub_overflow() {
+    let _ = Fraction::from_integer(i64::MIN) - Fraction::from_integer(1);
+}
+
+#[test]
+#[should_panic(expected = "fraction division by zero or overflow")]
+fn test_panic_on_div_overflow() {
+    let max_u64_denom = Fraction::new_nonzero(1, NonZeroU64::new(u64::MAX).unwrap());
+    let two = Fraction::from_integer(2);
+    let _ = max_u64_denom / two;
+}
+
+#[test]
+#[should_panic(expected = "fraction negation overflowed its numerator")]
+fn test_panic_on_neg_overflow() {
+    let _ = -Fraction::from_integer(i64::MIN);
+}
+
+

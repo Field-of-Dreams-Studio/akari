@@ -1,5 +1,7 @@
+use core::num::NonZeroU64;
+
 use crate::fraction::definition::Fraction;
-use crate::fraction::gcd::gcd;
+use crate::fraction::gcd::{gcd, gcd_u128};
 
 impl Fraction {
     /// Default denominator cap for continued-fraction approximation.
@@ -9,32 +11,50 @@ impl Fraction {
     pub const DEFAULT_MAX_DENOM: i64 = 1_000_000;
 
     /// Creates a new `Fraction` reduced to lowest terms.
-    /// The new function already calls try_new, so it is reduced to its simplest terms from the start.
-    /// By design, the denominator should not be zero. 
-    /// Whatever the end user assigns to the denominator that causes it to be zero is a problem on their side.
-    /// The Checked functions for arithmetic funtions are available for further validation, but might be removed if this zero check is sufficient.
+    ///
+    /// A negative denominator is normalized by moving its sign to the numerator.
+    /// Panics when the denominator is zero or the normalized numerator cannot be
+    /// represented by `i64` (the latter is only possible for `i64::MIN / -1`).
     pub fn new(numer: i64, denom: i64) -> Self {
-        Self::try_new(numer, denom).expect("Fraction::new requires a non-zero denominator")
+        Self::try_new(numer, denom)
+            .expect("Fraction::new requires a non-zero denominator and representable numerator")
     }
 
-    /// Fallible constructor that returns `None` when the denominator is zero.
+    /// Fallible constructor that returns `None` when the denominator is zero or
+    /// normalization would produce a numerator outside the `i64` range.
     pub fn try_new(numer: i64, denom: i64) -> Option<Self> {
         if denom == 0 {
             return None;
         }
-        let g = gcd(numer, denom);
-        let mut n = numer / g;
-        let mut d = denom / g;
-        if d < 0 {
-            n = -n;
-            d = -d;
-        }
-        Some(Self { numer: n, denom: d })
+
+        Self::from_magnitudes(
+            numer.unsigned_abs() as u128,
+            denom.unsigned_abs() as u128,
+            (numer < 0) ^ (denom < 0),
+        )
+    }
+
+    /// Creates a reduced fraction from a numerator and an already-positive denominator.
+    ///
+    /// Unlike [`new`](Self::new), this accepts denominators through the full `u64`
+    /// range and cannot fail due to a zero or negative denominator.  Panics when the
+    /// normalized numerator cannot be represented by `i64` (the latter is only possible for 
+    /// `i64::MIN / -1`).
+    pub fn new_nonzero(numer: i64, denom: NonZeroU64) -> Self {
+        let g = gcd(numer.unsigned_abs(), denom.get());
+        let numer_magnitude = numer.unsigned_abs() / g;
+        let denom = NonZeroU64::new(denom.get() / g).expect("a reduced denominator is non-zero");
+        let numer = Self::signed_numerator(numer_magnitude as u128, numer < 0)
+            .expect("reducing an i64 numerator remains representable");
+        Self { numer, denom }
     }
 
     /// Creates a fraction from an integer `n / 1`.
     pub fn from_integer(n: i64) -> Self {
-        Self { numer: n, denom: 1 }
+        Self {
+            numer: n,
+            denom: NonZeroU64::new(1).expect("one is non-zero"),
+        }
     }
 
     /// Returns the numerator of the fraction.
@@ -43,20 +63,25 @@ impl Fraction {
     }
 
     /// Returns the denominator of the fraction (guaranteed > 0).
-    pub fn denom(&self) -> i64 {
+    pub fn denom(&self) -> u64 {
+        self.denom.get()
+    }
+
+    /// Returns the denominator with its non-zero invariant preserved in the type.
+    pub fn denom_nonzero(&self) -> NonZeroU64 {
         self.denom
     }
 
     /// Converts the fraction to an `f64` representation.
     /// Technically it reads as one f64 number after conversion silently anyways.
     pub fn to_f64(&self) -> f64 {
-        self.numer as f64 / self.denom as f64
+        self.numer as f64 / self.denom.get() as f64
     }
 
     /// Returns true if the fraction is an integer (denominator is 1).
     /// This runs after the fraction is simplfied.
     pub fn is_integer(&self) -> bool {
-        self.denom == 1
+        self.denom.get() == 1
     }
 
     /// Converts an `f64` to the best rational approximation with denominator ≤ `max_denom`,
@@ -79,7 +104,7 @@ impl Fraction {
     /// assert_eq!(Fraction::from_f64_bounded(f64::NAN, 100), None);
     /// ```
     pub fn from_f64_bounded(f: f64, max_denom: i64) -> Option<Self> {
-        if !f.is_finite() {
+        if !f.is_finite() || max_denom <= 0 {
             return None;
         }
         let sign: i64 = if f < 0.0 { -1 } else { 1 };
@@ -182,5 +207,43 @@ impl Fraction {
     /// ```
     pub fn approx_f64(f: f64) -> Self {
         Self::from_f64(f).unwrap_or_else(|| Self::from_integer(f as i64))
+    }
+
+    pub(crate) fn from_magnitudes(
+        mut numer: u128,
+        mut denom: u128,
+        negative: bool,
+    ) -> Option<Self> {
+        if denom == 0 {
+            return None;
+        }
+        if numer == 0 {
+            return Some(Self::from_integer(0));
+        }
+
+        let g = gcd_u128(numer, denom);
+        numer /= g;
+        denom /= g;
+
+        let numer = Self::signed_numerator(numer, negative).ok()?;
+        let denom = NonZeroU64::new(u64::try_from(denom).ok()?)?;
+        Some(Self { numer, denom })
+    }
+
+    /// Creates a signed i64 numerator from u128 magnitude and sign.
+    /// Returns None if the magnitude is too large to fit in an i64.
+    fn signed_numerator(magnitude: u128, negative: bool) -> Result<i64, ()> {
+        if negative {
+            if magnitude == 1_u128 << 63 {
+                Ok(i64::MIN)
+            } else {
+                i64::try_from(magnitude)
+                    .map_err(|_| ())?
+                    .checked_neg()
+                    .ok_or(())
+            }
+        } else {
+            i64::try_from(magnitude).map_err(|_| ())
+        }
     }
 }
